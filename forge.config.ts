@@ -40,7 +40,9 @@ const config: ForgeConfig = {
       }
     ],
     appCategoryType: "public.app-category.music",
-    asar: true
+    asar: {
+      unpack: "**/node_modules/@ghostery/**/*"
+    }
   },
   rebuildConfig: {},
   makers: [
