@@ -131,7 +131,7 @@ const config: ForgeConfig = {
     postPackage: async (_forgeConfig: unknown, options: { outputPaths: string[] }): Promise<void> => {
       const nodeModulesPath = path.join(options.outputPaths[0], "resources", "node_modules");
       await fs.mkdir(nodeModulesPath, { recursive: true });
-      
+
       const copyDir = async (src: string, dest: string): Promise<void> => {
         if (!(await fs.stat(src).catch((): null => null))?.isDirectory()) return;
         await fs.mkdir(dest, { recursive: true });
@@ -148,7 +148,20 @@ const config: ForgeConfig = {
       };
 
       // Copy necessary modules to global resources folder
-      const modulesToCopy = ["@ghostery", "cross-fetch", "tldts-experimental", "tldts", "node-fetch", "@remusao", "data-uri-to-buffer", "fetch-blob", "formdata-polyfill", "whatwg-url", "webidl-conversions"];
+      const modulesToCopy = [
+        "@ghostery",
+        "cross-fetch",
+        "tldts-experimental",
+        "tldts",
+        "node-fetch",
+        "@remusao",
+        "data-uri-to-buffer",
+        "fetch-blob",
+        "formdata-polyfill",
+        "whatwg-url",
+        "tr46",
+        "webidl-conversions"
+      ];
       for (const mod of modulesToCopy) {
         const src = path.resolve(process.cwd(), "node_modules", mod);
         const dest = path.join(nodeModulesPath, mod);

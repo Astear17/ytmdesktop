@@ -523,6 +523,7 @@ window.ytmd.handleUpdateDownloaded(() => {
           <img class="icon" :src="logo" />
           <h2 class="app-name">YouTube Music Desktop App</h2>
           <p class="made-by">Made by YTMDesktop Team</p>
+          <p class="forked-by">Forked by Astear17</p>
           <template v-if="!autoUpdaterDisabled">
             <button
               v-if="!updateDownloaded"

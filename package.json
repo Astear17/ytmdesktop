@@ -68,6 +68,7 @@
     "fastify-socket.io": "^5.1.0",
     "material-symbols": "^0.12.0",
     "socket.io": "^4.8.3",
+    "tr46": "^6.0.0",
     "vue": "^3.5.28",
     "webidl-conversions": "^8.0.1"
   },
