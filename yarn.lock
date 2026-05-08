@@ -8904,6 +8904,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"webidl-conversions@npm:^8.0.1":
+  version: 8.0.1
+  resolution: "webidl-conversions@npm:8.0.1"
+  checksum: 10c0/3f6f327ca5fa0c065ed8ed0ef3b72f33623376e68f958e9b7bd0df49fdb0b908139ac2338d19fb45bd0e05595bda96cb6d1622222a8b413daa38a17aacc4dd46
+  languageName: node
+  linkType: hard
+
 "webpack-sources@npm:^3.3.4":
   version: 3.4.1
   resolution: "webpack-sources@npm:3.4.1"
@@ -9290,5 +9297,6 @@ __metadata:
     typescript: "npm:~5.9.3"
     vite: "npm:^5.4.21"
     vue: "npm:^3.5.28"
+    webidl-conversions: "npm:^8.0.1"
   languageName: unknown
   linkType: soft

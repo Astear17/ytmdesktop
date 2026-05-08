@@ -1,5 +1,6 @@
-import { execSync } from "node:child_process";
 import { defineConfig } from "vite";
+import path from "node:path";
+import { execSync } from "node:child_process";
 
 let gitBranch: string = "";
 try {
@@ -32,10 +33,11 @@ export default defineConfig({
         "@ghostery/adblocker-electron",
         "@ghostery/adblocker-electron-preload",
         "cross-fetch",
-        "ghostery"
+        "whatwg-url"
       ]
     }
   },
+  plugins: [],
   define: {
     YTMD_DISABLE_UPDATES: devBuild,
     YTMD_UPDATE_FEED_OWNER: process.env.YTMD_UPDATE_FEED_OWNER ? `'${process.env.YTMD_UPDATE_FEED_OWNER}'` : "'ytmdesktop'",

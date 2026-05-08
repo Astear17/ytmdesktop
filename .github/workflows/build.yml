@@ -7,8 +7,13 @@ on:
 
 jobs:
   build:
-    name: Build Windows x64
-    runs-on: windows-latest
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - name: Github checkout
@@ -30,10 +35,25 @@ jobs:
         run: yarn --immutable
 
       - name: Build
-        run: yarn make --arch x64
+        run: yarn make
 
-      - name: Upload artifacts
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: ytmdesktop-windows-x64
-          path: out/make/squirrel.windows/x64/*.exe
+          name: ytmdesktop-windows
+          path: out/make/**/*
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop-linux
+          path: out/make/**/*
+
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop-macos
+          path: out/make/**/*

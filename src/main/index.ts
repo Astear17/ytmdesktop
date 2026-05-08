@@ -1,3 +1,4 @@
+import "./bootstrap";
 import {
   app,
   autoUpdater,
@@ -18,10 +19,12 @@ import {
   shell,
   Tray
 } from "electron";
+import path from "node:path";
+
 import Conf from "conf";
 import log from "electron-log";
-import path from "path";
 import fs from "fs/promises";
+// @ts-expect-error - Missing type declarations for this package
 import electronSquirrelStartup from "electron-squirrel-startup";
 
 import MemoryStore from "./memory-store";

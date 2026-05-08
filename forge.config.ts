@@ -6,6 +6,8 @@ import { MakerRpm } from "@electron-forge/maker-rpm";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 // There is probably a better way to do this, such as fetching it directly from forge
 let makerArch = null;
@@ -31,7 +33,8 @@ const config: ForgeConfig = {
       "./src/assets/icons/controls/pause-button.png",
       "./src/assets/icons/controls/play-button.png",
       "./src/assets/icons/controls/play-next-button.png",
-      "./src/assets/icons/controls/play-previous-button.png"
+      "./src/assets/icons/controls/play-previous-button.png",
+      "./node_modules/@ghostery/adblocker-electron-preload/dist/index.cjs"
     ],
     protocols: [
       {
@@ -40,9 +43,7 @@ const config: ForgeConfig = {
       }
     ],
     appCategoryType: "public.app-category.music",
-    asar: {
-      unpack: "**/node_modules/@ghostery/**/*"
-    }
+    asar: true
   },
   rebuildConfig: {},
   makers: [
@@ -125,7 +126,36 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true
     })
-  ]
+  ],
+  hooks: {
+    postPackage: async (_forgeConfig: unknown, options: { outputPaths: string[] }): Promise<void> => {
+      const nodeModulesPath = path.join(options.outputPaths[0], "resources", "node_modules");
+      await fs.mkdir(nodeModulesPath, { recursive: true });
+      
+      const copyDir = async (src: string, dest: string): Promise<void> => {
+        if (!(await fs.stat(src).catch((): null => null))?.isDirectory()) return;
+        await fs.mkdir(dest, { recursive: true });
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          if (entry.isDirectory()) {
+            await copyDir(srcPath, destPath);
+          } else {
+            await fs.copyFile(srcPath, destPath);
+          }
+        }
+      };
+
+      // Copy necessary modules to global resources folder
+      const modulesToCopy = ["@ghostery", "cross-fetch", "tldts-experimental", "tldts", "node-fetch", "@remusao", "data-uri-to-buffer", "fetch-blob", "formdata-polyfill", "whatwg-url", "webidl-conversions"];
+      for (const mod of modulesToCopy) {
+        const src = path.resolve(process.cwd(), "node_modules", mod);
+        const dest = path.join(nodeModulesPath, mod);
+        await copyDir(src, dest);
+      }
+    }
+  }
 };
 
 export default config;
