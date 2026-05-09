@@ -131,6 +131,7 @@ export default class DiscordClient extends EventEmitter {
   }
 
   public setActivity(activity: DiscordActivity) {
+    log.debug("dipc: send SET_ACTIVITY", activity);
     this.ipcClient.send({
       cmd: "SET_ACTIVITY",
       args: {
@@ -142,6 +143,7 @@ export default class DiscordClient extends EventEmitter {
   }
 
   public clearActivity() {
+    log.debug("dipc: send CLEAR_ACTIVITY");
     this.ipcClient.send({
       cmd: "SET_ACTIVITY",
       args: {
