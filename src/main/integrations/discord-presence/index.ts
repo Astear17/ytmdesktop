@@ -66,6 +66,8 @@ export default class DiscordPresence implements IIntegration {
 
   private connectionRetries: number = 0;
 
+  private hasFullMetadata = false;
+
   private UpdateActivity() {
     if (this.activityDebounceTimeout) return;
     this.activityDebounceTimeout = setTimeout(() => {
@@ -73,34 +75,65 @@ export default class DiscordPresence implements IIntegration {
         this.discordClient.clearActivity();
         return;
       }
-      const { title, author, album, id, thumbnails, durationSeconds, channelId, albumId } = this.videoDetails;
-      const thumbnail = getHighestResThumbnail(thumbnails);
-      this.discordClient.setActivity({
+
+      // Safe extraction with fallbacks for partial metadata
+      const title = (this.videoDetails.title || "Unknown Track") as string;
+      const author = (this.videoDetails.author || "Unknown Artist") as string;
+      const album = this.videoDetails.album as string | undefined;
+      const id = this.videoDetails.id as string | undefined;
+      const thumbnails = (this.videoDetails.thumbnails || []) as Thumbnail[];
+      const durationSeconds = Number(this.videoDetails.durationSeconds) || undefined;
+      const channelId = this.videoDetails.channelId as string | undefined;
+      const albumId = this.videoDetails.albumId as string | undefined;
+
+      const thumbnail = thumbnails.length > 0 ? getHighestResThumbnail(thumbnails) : undefined;
+
+      const timestamps: { start?: number; end?: number } = {};
+      if (this.videoState === VideoState.Playing && typeof durationSeconds === "number" && typeof this.progress === "number") {
+        timestamps.start = Date.now() - this.progress * 1000;
+        timestamps.end = Date.now() + (durationSeconds - this.progress) * 1000;
+      }
+
+      const activity: any = {
         type: DiscordActivityType.Listening,
         status_display_type: 1,
         details: stringLimit(title, 128, 2),
-        details_url: `https://music.youtube.com/watch?v=${id}`,
         state: stringLimit(author, 128, 2),
-        state_url: `https://music.youtube.com/channel/${channelId}`,
-        timestamps: {
-          start: this.videoState === VideoState.Playing ? Date.now() - this.progress * 1000 : undefined,
-          end: this.videoState === VideoState.Playing ? Date.now() + (durationSeconds - this.progress) * 1000 : undefined
-        },
         assets: {
-          large_image: (thumbnail?.length ?? 0) <= 256 ? thumbnail : "ytmd-logo",
+          large_image: thumbnail && thumbnail.length <= 256 ? thumbnail : "ytmd-logo",
           large_text: album ? stringLimit(album, 128, 2) : undefined,
-          large_url: albumId ? `https://music.youtube.com/browse/${albumId}` : undefined,
           small_image: getSmallImageKey(this.videoState),
           small_text: getSmallImageText(this.videoState)
         },
-        instance: false,
-        buttons: [
+        instance: false
+      };
+
+      // Only include URLs and timestamps when we have full metadata
+      if (this.hasFullMetadata && id) {
+        activity.details_url = `https://music.youtube.com/watch?v=${id}`;
+      }
+      if (this.hasFullMetadata && channelId) {
+        activity.state_url = `https://music.youtube.com/channel/${channelId}`;
+      }
+      if (this.hasFullMetadata && albumId) {
+        activity.assets.large_url = `https://music.youtube.com/browse/${albumId}`;
+      }
+      if (Object.keys(timestamps).length > 0) {
+        activity.timestamps = timestamps;
+      }
+
+      if (id) {
+        activity.buttons = [
           {
             label: "Play on YTMDesktop",
             url: `ytmd://play/${id}`
           }
-        ]
-      });
+        ];
+      }
+
+      log.debug("discord-presence: send activity (fallback=" + !this.hasFullMetadata + ")", activity);
+      this.discordClient.setActivity(activity);
+
       this.activityDebounceTimeout = null;
     }, 1000);
   }
@@ -109,8 +142,11 @@ export default class DiscordPresence implements IIntegration {
     if (!this.ready) return;
 
     const { videoDetails, videoProgress, trackState, hasFullMetadata } = state;
-    log.debug("discord-presence: playerStateChanged", {
-      hasFullMetadata,
+    // store hasFullMetadata so UpdateActivity can choose what to include
+    this.hasFullMetadata = !!hasFullMetadata;
+
+    log.debug('discord-presence: playerStateChanged', {
+      hasFullMetadata: this.hasFullMetadata,
       trackState,
       videoId: videoDetails?.id,
       progress: Math.floor(videoProgress)
@@ -126,22 +162,28 @@ export default class DiscordPresence implements IIntegration {
     this.videoState = trackState;
     this.videoDetails = videoDetails;
     this.progress = Math.floor(videoProgress);
-    if (
+
+    const changedEnoughForFull =
       hasFullMetadata &&
-      (oldState !== this.videoState || oldId !== this.videoDetails.id || Math.abs(this.progress - oldProgress) > 1 || oldProgress > this.progress)
-    ) {
-      log.debug("discord-presence: UpdateActivity triggered", {
+      (oldState !== this.videoState || oldId !== this.videoDetails.id || Math.abs(this.progress - oldProgress) > 1 || oldProgress > this.progress);
+
+    // Fallback: if we don't have full metadata, still send activity when the track changes (id differs)
+    const changedForFallback = !hasFullMetadata && oldId !== this.videoDetails.id;
+
+    if (changedEnoughForFull || changedForFallback) {
+      log.debug('discord-presence: UpdateActivity triggered', {
         oldState,
         oldId,
         oldProgress,
         newState: this.videoState,
         newId: this.videoDetails.id,
-        progress: this.progress
+        progress: this.progress,
+        hasFullMetadata: this.hasFullMetadata
       });
       this.UpdateActivity();
     } else {
-      log.debug("discord-presence: UpdateActivity skipped", {
-        hasFullMetadata,
+      log.debug('discord-presence: UpdateActivity skipped', {
+        hasFullMetadata: this.hasFullMetadata,
         oldState,
         oldId,
         oldProgress,
