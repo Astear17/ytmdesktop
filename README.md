@@ -1,5 +1,7 @@
 # YouTube Music Desktop App
 
+> This is a fork of [ytmdesktop/ytmdesktop](https://github.com/ytmdesktop/ytmdesktop) which includes unofficial programs and modified components. I do not handle any responsibility if user has done any further actions that violates the license which stands by the owner of the repository
+
 A cross-platform desktop application for YouTube Music, providing a native experience with enhanced features.
 
 ![YouTube Music Desktop App](.github/images/readme_main_app.png)
@@ -19,16 +21,21 @@ A cross-platform desktop application for YouTube Music, providing a native exper
 
 ## Download
 
-The latest version can be downloaded from the [Releases](https://github.com/ytmdesktop/ytmdesktop/releases) page.
+It is recommended to download the latest version of your OS at [GitHub Actions](https://github.com/Astear17/ytmdesktop/actions) on the latest workflow run.
+You could still download over [Releases](https://github.com/ytmdesktop/ytmdesktop/releases) page but some build conflicts with names so this could be fixed soon.
+Or click on the hyperlinks of your build below to download
 
 ### Windows
-- **Direct Download**: Available in the Releases section.
++ 64bit (x86_64): [`ytmdesktop-windows-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892671613)
++ ARM64: [`ytmdesktop-windows-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892671684)
 
 ### macOS
-- **Direct Download**: Available in the Releases section.
++ 64bit (x86_64): [`ytmdesktop-macos-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892659096)<br>
++ ARM64: [`ytmdesktop-macos-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892658973)
 
 ### Linux
-- **Direct Download**: Available in the Releases section (AppImage, Deb, RPM).
++ 64bit (x86_64): [`ytmdesktop-linux-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892665345)<br>
++ ARM64: [`ytmdesktop-linux-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892664049)
 
 ## Development
 
@@ -37,7 +44,7 @@ The latest version can be downloaded from the [Releases](https://github.com/ytmd
 - [Node.js (v20 or higher)](https://nodejs.org)
 - [Yarn](https://yarnpkg.com)
 
-### Getting Started
+### Build & Run in Development Mode
 1. Clone the repository:
    ```bash
    git clone https://github.com/Astear17/ytmdesktop.git
