@@ -48,16 +48,47 @@ jobs:
           YTMD_UPDATE_FEED_REPOSITORY: ${{ vars.YTMD_UPDATE_FEED_REPOSITORY }}
         run: yarn make --arch ${{ matrix.arch }}
 
+      - name: Upload artifacts (Linux)
+        if: matrix.os.name == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop-linux-${{ matrix.arch }}
+          path: out/make/**
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os.name == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop-windows-${{ matrix.arch }}
+          path: out/make/**
+
+      - name: Upload artifacts (macOS)
+        if: matrix.os.name == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ytmdesktop-macos-${{ matrix.arch }}
+          path: out/make/**
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -R artifacts || dir /s artifacts
+
       - name: Release Build Resources
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'workflow_dispatch'
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           files: |
-            out/make/squirrel.windows/${{ matrix.arch }}/*.exe
-            out/make/deb/${{ matrix.arch }}/*.deb
-            out/make/rpm/${{ matrix.arch }}/*.rpm
-            out/make/zip/darwin/${{ matrix.arch }}/*.zip
+            artifacts/**/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
