@@ -207,7 +207,6 @@ if (!gotTheLock) {
   });
 }
 
-// Protocol handler
 function handleProtocol(url: string) {
   log.info("Handling protocol url", url);
   const urlPaths = url.split("://")[1];
