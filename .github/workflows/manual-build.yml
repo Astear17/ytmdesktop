@@ -1,0 +1,63 @@
+---
+name: Manual Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g. v2.0.26-manual)'
+        required: true
+        default: 'manual-build'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [
+            { name: 'linux',   image: 'ubuntu-latest' },
+            { name: 'windows', image: 'windows-latest' },
+            { name: 'macos',   image: 'macos-latest' }
+          ]
+        arch: [ 'x64', 'arm64' ]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os.image }}
+
+    steps:
+      - name: Github checkout
+        uses: actions/checkout@v4
+
+      - name: Force HTTPS for GitHub
+        run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+
+      - name: Corepack Enable Yarn
+        run: corepack enable yarn
+
+      - name: Setup Node (v20)
+        uses: actions/setup-node@v4
+        with:
+          cache: 'yarn'
+          node-version: "20.x"
+
+      - name: Install dependencies
+        run: yarn --immutable
+
+      - name: Build (${{ matrix.arch }})
+        env:
+          YTMD_UPDATE_FEED_OWNER: ${{ vars.YTMD_UPDATE_FEED_OWNER }}
+          YTMD_UPDATE_FEED_REPOSITORY: ${{ vars.YTMD_UPDATE_FEED_REPOSITORY }}
+        run: yarn make --arch ${{ matrix.arch }}
+
+      - name: Release Build Resources
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: |
+            out/make/squirrel.windows/${{ matrix.arch }}/*.exe
+            out/make/deb/${{ matrix.arch }}/*.deb
+            out/make/rpm/${{ matrix.arch }}/*.rpm
+            out/make/zip/darwin/${{ matrix.arch }}/*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
