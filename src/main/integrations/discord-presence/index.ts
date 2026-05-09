@@ -109,6 +109,13 @@ export default class DiscordPresence implements IIntegration {
     if (!this.ready) return;
 
     const { videoDetails, videoProgress, trackState, hasFullMetadata } = state;
+    log.debug("discord-presence: playerStateChanged", {
+      hasFullMetadata,
+      trackState,
+      videoId: videoDetails?.id,
+      progress: Math.floor(videoProgress)
+    });
+
     if (!videoDetails) {
       this.discordClient.clearActivity();
       return;
@@ -123,7 +130,25 @@ export default class DiscordPresence implements IIntegration {
       hasFullMetadata &&
       (oldState !== this.videoState || oldId !== this.videoDetails.id || Math.abs(this.progress - oldProgress) > 1 || oldProgress > this.progress)
     ) {
+      log.debug("discord-presence: UpdateActivity triggered", {
+        oldState,
+        oldId,
+        oldProgress,
+        newState: this.videoState,
+        newId: this.videoDetails.id,
+        progress: this.progress
+      });
       this.UpdateActivity();
+    } else {
+      log.debug("discord-presence: UpdateActivity skipped", {
+        hasFullMetadata,
+        oldState,
+        oldId,
+        oldProgress,
+        newState: this.videoState,
+        newId: this.videoDetails?.id,
+        progress: this.progress
+      });
     }
 
     clearTimeout(this.pauseTimeout);
