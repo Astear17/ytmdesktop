@@ -85,7 +85,8 @@ export default class DiscordClient extends EventEmitter {
             this.connected = false;
             this.emit("close");
           });
-          this.ipcClient.on("data", (op: OPCode, json: unknown) => {
+          this.ipcClient.on("data", (payload: { op: OPCode; json: unknown }) => {
+            const { op, json } = payload;
             switch (op) {
               case OPCode.PING: {
                 this.ipcClient.send(json, OPCode.PONG);
