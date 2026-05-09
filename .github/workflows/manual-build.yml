@@ -9,6 +9,9 @@ on:
         required: true
         default: 'manual-build'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -91,4 +94,4 @@ jobs:
             artifacts/**/*
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
