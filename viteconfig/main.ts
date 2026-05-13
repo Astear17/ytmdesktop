@@ -1,5 +1,4 @@
 import { defineConfig } from "vite";
-import path from "node:path";
 import { execSync } from "node:child_process";
 
 let gitBranch: string = "";
@@ -27,14 +26,7 @@ export default defineConfig({
   build: {
     outDir: ".vite/main",
     rollupOptions: {
-      external: [
-        "bufferutil",
-        "utf-8-validate",
-        "@ghostery/adblocker-electron",
-        "@ghostery/adblocker-electron-preload",
-        "cross-fetch",
-        "whatwg-url"
-      ]
+      external: ["bufferutil", "utf-8-validate", "@ghostery/adblocker-electron", "@ghostery/adblocker-electron-preload", "cross-fetch", "whatwg-url"]
     }
   },
   plugins: [],

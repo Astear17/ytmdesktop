@@ -598,7 +598,20 @@ window.addEventListener("load", async () => {
     ipcRenderer.send(`ytmView:getPlaylists:response:${requestId}`, playlists);
   });
 
+  let youtubeNonStopEnabled = (await store.get("integrations")).youtubeNonStopEnabled;
+
+  setInterval(() => {
+    if (youtubeNonStopEnabled) {
+      const youThereNode = document.querySelector("ytmusic-you-there-renderer");
+      if (youThereNode) {
+        const button = youThereNode.querySelector("button");
+        if (button) button.click();
+      }
+    }
+  }, 1000);
+
   store.onDidAnyChange(newState => {
+    youtubeNonStopEnabled = newState.integrations.youtubeNonStopEnabled;
     if (newState.appearance.alwaysShowVolumeSlider) {
       const volumeSlider = document.querySelector("#volume-slider");
       if (!volumeSlider.classList.contains("ytmd-persist-volume-slider")) {

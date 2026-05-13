@@ -61,6 +61,8 @@ const companionServerAuthTokens = ref<AuthToken[]>(
 const companionServerCORSWildcardEnabled = ref<boolean>(integrations.companionServerCORSWildcardEnabled);
 const discordPresenceEnabled = ref<boolean>(integrations.discordPresenceEnabled);
 const lastFMEnabled = ref<boolean>(integrations.lastFMEnabled);
+const adblockerEnabled = ref<boolean>(integrations.adblockerEnabled ?? true);
+const youtubeNonStopEnabled = ref<boolean>(integrations.youtubeNonStopEnabled ?? true);
 
 const shortcutPlayPause = ref<string>(shortcuts.playPause);
 const shortcutNext = ref<string>(shortcuts.next);
@@ -99,6 +101,8 @@ store.onDidAnyChange(async newState => {
   companionServerCORSWildcardEnabled.value = newState.integrations.companionServerCORSWildcardEnabled;
   discordPresenceEnabled.value = newState.integrations.discordPresenceEnabled;
   lastFMEnabled.value = newState.integrations.lastFMEnabled;
+  adblockerEnabled.value = newState.integrations.adblockerEnabled ?? true;
+  youtubeNonStopEnabled.value = newState.integrations.youtubeNonStopEnabled ?? true;
   lastFMSessionKey.value = newState.lastfm.sessionKey;
   scrobblePercent.value = newState.lastfm.scrobblePercent;
 
@@ -169,6 +173,8 @@ async function settingsChanged() {
   store.set("integrations.companionServerCORSWildcardEnabled", companionServerCORSWildcardEnabled.value);
   store.set("integrations.discordPresenceEnabled", discordPresenceEnabled.value);
   store.set("integrations.lastFMEnabled", lastFMEnabled.value);
+  store.set("integrations.adblockerEnabled", adblockerEnabled.value);
+  store.set("integrations.youtubeNonStopEnabled", youtubeNonStopEnabled.value);
   store.set("lastfm.scrobblePercent", scrobblePercent.value);
 
   store.set("shortcuts.playPause", shortcutPlayPause.value);
@@ -341,6 +347,14 @@ window.ytmd.handleUpdateDownloaded(() => {
         </div>
 
         <div v-if="currentTab === 4" class="integrations-tab">
+          <YTMDSetting v-model="adblockerEnabled" type="checkbox" name="Adblocker" @change="settingsChanged" />
+          <YTMDSetting
+            v-model="youtubeNonStopEnabled"
+            type="checkbox"
+            name="YouTube NonStop"
+            description="Automatically clicks 'Continue watching?' dialog"
+            @change="settingsChanged"
+          />
           <YTMDSetting
             v-model="companionServerEnabled"
             type="checkbox"

@@ -372,7 +372,9 @@ const store = new Conf<StoreSchema>({
       companionServerAuthTokens: null,
       companionServerCORSWildcardEnabled: false,
       discordPresenceEnabled: false,
-      lastFMEnabled: false
+      lastFMEnabled: false,
+      adblockerEnabled: true,
+      youtubeNonStopEnabled: true
     },
     shortcuts: {
       playPause: "",
@@ -425,6 +427,14 @@ const store = new Conf<StoreSchema>({
     ">=2.0.7": store => {
       if (!store.has("appearance.trayIconStyle")) {
         store.set("appearance.trayIconStyle", 0);
+      }
+    },
+    ">=2.0.26": store => {
+      if (!store.has("integrations.adblockerEnabled")) {
+        store.set("integrations.adblockerEnabled", true);
+      }
+      if (!store.has("integrations.youtubeNonStopEnabled")) {
+        store.set("integrations.youtubeNonStopEnabled", true);
       }
     }
   }
@@ -550,6 +560,14 @@ store.onDidAnyChange(async (newState, oldState) => {
   } else if (!newState.integrations.lastFMEnabled && oldState.integrations.lastFMEnabled) {
     lastFMScrobbler.disable();
     log.info("Integration disabled: Last.fm");
+  }
+
+  if (newState.integrations.adblockerEnabled && !oldState.integrations.adblockerEnabled) {
+    adblocker.enable();
+    log.info("Integration enabled: Adblocker");
+  } else if (!newState.integrations.adblockerEnabled && oldState.integrations.adblockerEnabled) {
+    adblocker.disable();
+    log.info("Integration disabled: Adblocker");
   }
 
   if (anyShortcutChanged(newState, oldState)) registerShortcuts();
@@ -1037,8 +1055,7 @@ const createYTMView = (): void => {
   companionServer.provide(store, memoryStore, ytmView);
   customCss.provide(store, ytmView);
   ratioVolume.provide(ytmView);
-  adblocker.provide(ytmView);
-  adblocker.enable();
+  adblocker.provide(store, ytmView);
 
   // Attach events to ytm view
   ytmView.webContents.on("will-navigate", event => {
@@ -1957,6 +1974,12 @@ app.on("ready", async () => {
     lastFMScrobbler.provide(store, memoryStore);
     lastFMScrobbler.enable();
     log.info("Integration enabled: Last.fm");
+  }
+
+  // Adblocker
+  if (store.get("integrations").adblockerEnabled) {
+    adblocker.enable();
+    log.info("Integration enabled: Adblocker");
   }
 
   nativeTheme.on("updated", setTrayIcon);
