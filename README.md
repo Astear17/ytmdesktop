@@ -21,21 +21,21 @@ A cross-platform desktop application for YouTube Music, providing a native exper
 
 ## Download
 
-It is recommended to download the latest version of your OS at [GitHub Actions](https://github.com/Astear17/ytmdesktop/actions) on the latest workflow run.
-You could still download over [Releases](https://github.com/ytmdesktop/ytmdesktop/releases) page but some build conflicts with names so this could be fixed soon.
-Or click on the hyperlinks of your build below to download
+Official fork builds use the **[Manual Build & Release](https://github.com/Astear17/ytmdesktop/actions/workflows/manual-build.yml)** workflow. Example successful run: **[#25806701001](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001)** (commit `09bda90`, **3.0.0-hotfix**). Open the run, scroll to **Artifacts**, and download the ZIP whose name matches your OS and CPU below (each ZIP contains the installer(s) produced for that matrix job, e.g. `.exe` on Windows, `.deb`/`.rpm` on Linux, `.zip` on macOS).
 
-### Windows
-+ 64bit (x86_64): [`ytmdesktop-windows-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892671613)
-+ ARM64: [`ytmdesktop-windows-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892671684)
+| OS | Architecture | GitHub Actions | GitHub Releases |
+| --- | --- | --- | --- |
+| Windows | x86_64 (amd64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_windows-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| Windows | ARM64 (aarch64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_windows-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| macOS | x86_64 (Intel) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_macos-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| macOS | ARM64 (Apple Silicon) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_macos-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| Linux | x86_64 (amd64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_linux-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| Linux | ARM64 (aarch64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_linux-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
 
-### macOS
-+ 64bit (x86_64): [`ytmdesktop-macos-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892659096)<br>
-+ ARM64: [`ytmdesktop-macos-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892658973)
+**SHA-256 (from CI, run 25806701001)**  
+`windows-x64` — `c05b0940da58ac0914ce27cf0d3b81a1e36055d5337b925a2949d17b498006c6` · `windows-arm64` — `0498ae5f4dd01dc66f1ddf4fc995f407b69c6118ed9a9443cde9274171a717e9` · `macos-x64` — `16c1e9e62753fd78057a5692c2b1d18d1047e2cb85170ba69a07bb396382b122` · `macos-arm64` — `58ed808f61658b296085fb80c5c2f5f38b10613ab581bf2b548df6e555e8caa6` · `linux-x64` — `bf4720ee5336eeb3b876fa8927398fd4b79270e58a86dd15e8ff92cd17a2bf4f` · `linux-arm64` — `4065218151beda7234ebf368186af6eb9e4782cb4f520145055647ad08134397`
 
-### Linux
-+ 64bit (x86_64): [`ytmdesktop-linux-x64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892665345)<br>
-+ ARM64: [`ytmdesktop-linux-arm64.zip`](https://github.com/Astear17/ytmdesktop/actions/runs/25591117110/artifacts/6892664049)
+For the next manual build, open the **[Actions](https://github.com/Astear17/ytmdesktop/actions)** tab and use the newest **Manual Build & Release** run; artifact names will include the current `package.json` version.
 
 ## Development
 
