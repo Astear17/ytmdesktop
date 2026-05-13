@@ -4,6 +4,9 @@ export enum TrayIconStyle {
   Black = 2
 }
 
+/** Ghostery @ghostery/adblocker-electron filter bundles (see `fetch.js` in that package). */
+export type AdblockerEngine = "ghostery_ads" | "ghostery_ads_privacy" | "ghostery_full";
+
 export type StoreSchema = {
   metadata: {
     version: 1;
@@ -43,6 +46,8 @@ export type StoreSchema = {
     discordPresenceEnabled: boolean;
     lastFMEnabled: boolean;
     adblockerEnabled: boolean;
+    /** Which Ghostery filter bundle to compile into the in-process blocker. */
+    adblockerEngine: AdblockerEngine;
     youtubeNonStopEnabled: boolean;
     sponsorBlockEnabled: boolean;
     lyricsTranslationEnabled: boolean;

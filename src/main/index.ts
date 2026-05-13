@@ -430,6 +430,7 @@ const store = new Conf<StoreSchema>({
       discordPresenceEnabled: false,
       lastFMEnabled: false,
       adblockerEnabled: true,
+      adblockerEngine: "ghostery_ads_privacy",
       youtubeNonStopEnabled: true,
       sponsorBlockEnabled: true,
       lyricsTranslationEnabled: false,
@@ -508,6 +509,9 @@ const store = new Conf<StoreSchema>({
     }
   }
 });
+if (!store.has("integrations.adblockerEngine")) {
+  store.set("integrations.adblockerEngine", "ghostery_ads_privacy");
+}
 store.onDidAnyChange(async (newState, oldState) => {
   if (settingsWindow !== null) {
     settingsWindow.webContents.send("settings:stateChanged", newState, oldState);
@@ -637,6 +641,12 @@ store.onDidAnyChange(async (newState, oldState) => {
   } else if (!newState.integrations.adblockerEnabled && oldState.integrations.adblockerEnabled) {
     adblocker.disable();
     log.info("Integration disabled: Adblocker");
+  }
+
+  const newAdbEngine = newState.integrations.adblockerEngine ?? "ghostery_ads_privacy";
+  const oldAdbEngine = oldState.integrations.adblockerEngine ?? "ghostery_ads_privacy";
+  if (newState.integrations.adblockerEnabled && newAdbEngine !== oldAdbEngine) {
+    void adblocker.reloadEngine().then(() => log.info(`Integration update: Adblocker engine → ${newAdbEngine}`));
   }
 
   if (newState.integrations.sponsorBlockEnabled) {

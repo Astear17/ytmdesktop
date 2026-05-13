@@ -3,7 +3,7 @@ import { ref, watch, onBeforeMount, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import KeybindInput from "../../components/KeybindInput.vue";
 import YTMDSetting from "../../components/YTMDSetting.vue";
-import { TrayIconStyle } from "~shared/store/schema";
+import { TrayIconStyle, type AdblockerEngine } from "~shared/store/schema";
 import { AuthToken } from "~shared/integrations/companion-server/types";
 import logo from "~assets/icons/ytmd.png";
 
@@ -71,6 +71,19 @@ const audioOutputDeviceMap = computed(() => ({
   default: t("default_audio_device"),
   ...audioDevices.value
 }));
+
+function normalizeAdblockerEngine(value: unknown): AdblockerEngine {
+  if (value === "ghostery_ads" || value === "ghostery_full" || value === "ghostery_ads_privacy") {
+    return value;
+  }
+  return "ghostery_ads_privacy";
+}
+
+const adblockerEngineSelectMap = computed(() => ({
+  ghostery_ads: t("adblocker_engine_ghostery_ads"),
+  ghostery_ads_privacy: t("adblocker_engine_ghostery_ads_privacy"),
+  ghostery_full: t("adblocker_engine_ghostery_full")
+}));
 const crossfadeEnabled = ref(false);
 const crossfadeDuration = ref(5);
 
@@ -80,6 +93,7 @@ const companionServerCORSWildcardEnabled = ref(false);
 const discordPresenceEnabled = ref(false);
 const lastFMEnabled = ref(false);
 const adblockerEnabled = ref(true);
+const adblockerEngine = ref<AdblockerEngine>("ghostery_ads_privacy");
 const youtubeNonStopEnabled = ref(true);
 const sponsorBlockEnabled = ref(true);
 const lyricsTranslationEnabled = ref(false);
@@ -202,6 +216,7 @@ onBeforeMount(async () => {
     discordPresenceEnabled.value = !!integrationsStore?.discordPresenceEnabled;
     lastFMEnabled.value = !!integrationsStore?.lastFMEnabled;
     adblockerEnabled.value = integrationsStore?.adblockerEnabled !== false;
+    adblockerEngine.value = normalizeAdblockerEngine(integrationsStore?.adblockerEngine);
     youtubeNonStopEnabled.value = integrationsStore?.youtubeNonStopEnabled !== false;
     sponsorBlockEnabled.value = integrationsStore?.sponsorBlockEnabled !== false;
     lyricsTranslationEnabled.value = !!integrationsStore?.lyricsTranslationEnabled;
@@ -285,6 +300,7 @@ onBeforeMount(async () => {
       discordPresenceEnabled.value = !!newState.integrations.discordPresenceEnabled;
       lastFMEnabled.value = !!newState.integrations.lastFMEnabled;
       adblockerEnabled.value = newState.integrations.adblockerEnabled !== false;
+      adblockerEngine.value = normalizeAdblockerEngine(newState.integrations.adblockerEngine);
       youtubeNonStopEnabled.value = newState.integrations.youtubeNonStopEnabled !== false;
       sponsorBlockEnabled.value = newState.integrations.sponsorBlockEnabled !== false;
       lyricsTranslationEnabled.value = !!newState.integrations.lyricsTranslationEnabled;
@@ -381,6 +397,7 @@ async function settingsChanged() {
   store.set("integrations.discordPresenceEnabled", discordPresenceEnabled.value);
   store.set("integrations.lastFMEnabled", lastFMEnabled.value);
   store.set("integrations.adblockerEnabled", adblockerEnabled.value);
+  store.set("integrations.adblockerEngine", adblockerEngine.value);
   store.set("integrations.youtubeNonStopEnabled", youtubeNonStopEnabled.value);
   store.set("integrations.sponsorBlockEnabled", sponsorBlockEnabled.value);
   store.set("integrations.lyricsTranslationEnabled", lyricsTranslationEnabled.value);
@@ -617,6 +634,15 @@ async function clearCache() {
 
         <div v-if="currentTab === 4" class="integrations-tab">
           <YTMDSetting v-model="adblockerEnabled" type="checkbox" :name="$t('adblocker')" @change="settingsChanged" />
+          <YTMDSetting
+            v-model="adblockerEngine"
+            type="select"
+            indented
+            :options-map="adblockerEngineSelectMap"
+            :name="$t('adblocker_engine')"
+            :description="$t('adblocker_engine_desc')"
+            @change="settingsChanged"
+          />
           <YTMDSetting
             v-model="youtubeNonStopEnabled"
             type="checkbox"
