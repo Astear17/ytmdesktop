@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
 @font-face {
   font-family: 'Open Sans';
   src: url("./fonts/OpenSans-VariableFont_wdth,wght.ttf") format('truetype');
@@ -8,10 +10,19 @@
   src: url("./fonts/WorkSans-VariableFont_wght.ttf") format('truetype');
 }
 
-html, body, #app {
+:root {
+  --system-accent-color: #ff0000;
+  --font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
   margin: 0;
-  height: 100%;
-  color: #EEEEEE;
-  font-family: 'Work Sans', sans-serif;
+  font-family: var(--font-family);
+  background-color: #030303;
+  color: #ffffff;
   overflow: hidden;
+}
+
+* {
+  font-family: inherit;
 }

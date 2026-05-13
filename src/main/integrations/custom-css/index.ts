@@ -102,15 +102,15 @@ export default class CustomCSS implements IIntegration {
         Have an alternative means of checking if YTM has loaded
         as I'd rather keep away from constantly having an event for if `ytmView:loaded` is emitted
         and only needed for the initial load of the app */
-      if (this.ipcListener) {
-        ipcMain.removeListener("ytmView:loaded", this.ipcListener);
-      }
-      this.ipcListener = () => {
-        this.ytmView.webContents.insertCSS(content).then(customCssRef => {
-          this.customCSSKey = customCssRef;
-        });
-      };
-      ipcMain.once("ytmView:loaded", this.ipcListener);
+      this.ytmView.webContents.on("did-finish-load", () => {
+        if (this.isEnabled) {
+          const content: string = fs.readFileSync(cssPath, "utf8");
+          this.ytmView.webContents.insertCSS(content).then(customCssRef => {
+            this.customCSSKey = customCssRef;
+            this.refitYTMPopups();
+          });
+        }
+      });
 
       this.ytmView.webContents.insertCSS(content).then(customCssRef => {
         this.refitYTMPopups();

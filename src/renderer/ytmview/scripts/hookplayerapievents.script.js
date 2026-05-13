@@ -84,4 +84,179 @@
       window.ytmd.sendDeletePlaylistObservation(playlistId);
     }
   });
-})
+
+  // Audio Processing (Visualizer, EQ, Normalization)
+  (function initAudio() {
+    const video = document.querySelector('video');
+    if (!video) {
+      setTimeout(initAudio, 1000);
+      return;
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaElementSource(video);
+    
+    // Equalizer
+    const filters = [];
+    const frequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+    let lastNode = source;
+
+    frequencies.forEach(freq => {
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = "peaking";
+      filter.frequency.value = freq;
+      filter.Q.value = 1;
+      filter.gain.value = 0;
+      lastNode.connect(filter);
+      filters.push(filter);
+      lastNode = filter;
+    });
+
+    // Normalizer (Compressor)
+    const compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+    
+    const normalizationGain = audioCtx.createGain();
+    normalizationGain.gain.value = 1;
+
+    lastNode.connect(compressor);
+    compressor.connect(normalizationGain);
+    lastNode = normalizationGain;
+
+    // Analyser
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    lastNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    window.__YTMD_AUDIO__ = {
+      updateSettings: (settings) => {
+        if (settings.eq) {
+          settings.eq.forEach((gain, index) => {
+            if (filters[index]) filters[index].gain.value = gain;
+          });
+        }
+        if (settings.normalization !== undefined) {
+          normalizationGain.gain.value = settings.normalization ? 1.5 : 1; // Simple boost for now
+        }
+        if (settings.outputDeviceId && video.setSinkId) {
+          video.setSinkId(settings.outputDeviceId);
+        }
+        
+        // Crossfade
+        if (this.crossfadeInterval) clearInterval(this.crossfadeInterval);
+        if (settings.crossfade) {
+          this.crossfadeInterval = setInterval(() => {
+            if (video.paused) return;
+            const duration = video.duration;
+            const currentTime = video.currentTime;
+            const timeLeft = duration - currentTime;
+            const fadeTime = settings.crossfadeDuration || 5;
+
+            if (timeLeft < fadeTime) {
+              video.volume = Math.max(0, timeLeft / fadeTime);
+            } else if (currentTime < fadeTime) {
+              video.volume = Math.min(1, currentTime / fadeTime);
+            } else {
+              video.volume = 1;
+            }
+          }, 200);
+        }
+      },
+      crossfadeInterval: null
+    };
+
+    function sendFrequencyData() {
+      analyser.getByteFrequencyData(dataArray);
+      window.ytmd.sendAudioData(Array.from(dataArray));
+      
+      drawVisualizer(dataArray);
+      requestAnimationFrame(sendFrequencyData);
+    }
+
+    const visualizerCanvas = document.createElement('canvas');
+    visualizerCanvas.id = 'ytmd-visualizer';
+    visualizerCanvas.style.position = 'absolute';
+    visualizerCanvas.style.bottom = '0';
+    visualizerCanvas.style.left = '0';
+    visualizerCanvas.style.width = '100%';
+    visualizerCanvas.style.height = '100%';
+    visualizerCanvas.style.pointerEvents = 'none';
+    visualizerCanvas.style.zIndex = '0';
+    visualizerCanvas.style.opacity = '0.4';
+
+    const playerBar = document.querySelector('ytmusic-player-bar');
+    if (playerBar) {
+      playerBar.style.position = 'relative';
+      playerBar.insertBefore(visualizerCanvas, playerBar.firstChild);
+    }
+
+    function drawVisualizer(data) {
+      const ctx = visualizerCanvas.getContext('2d');
+      const width = visualizerCanvas.width = visualizerCanvas.offsetWidth;
+      const height = visualizerCanvas.height = visualizerCanvas.offsetHeight;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      const barWidth = (width / data.length) * 2.5;
+      let x = 0;
+
+      for (let i = 0; i < data.length; i++) {
+        const barHeight = (data[i] / 255) * height;
+        
+        // Use system accent color if available
+        const accentColor = getComputedStyle(document.body).getPropertyValue('--system-accent-color') || '#ff0000';
+        ctx.fillStyle = accentColor;
+        
+        ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
+        x += barWidth;
+      }
+    }
+
+    sendFrequencyData();
+
+    // Lyrics Observer
+    const lyricsObserver = new MutationObserver(() => {
+      const lyricsContainer = document.querySelector('ytmusic-player-page #lyrics');
+      if (lyricsContainer) {
+        // Here we would handle translation and karaoke
+        // For now, we just log to verify it's working
+      }
+    });
+
+    const checkLyrics = () => {
+      const container = document.querySelector('ytmusic-player-page');
+      if (container) {
+        lyricsObserver.observe(container, { childList: true, subtree: true });
+      } else {
+        setTimeout(checkLyrics, 2000);
+      }
+    };
+    checkLyrics();
+
+    // Auto-skip Ads
+    setInterval(() => {
+      const skipButton = document.querySelector('.ytp-ad-skip-button') || document.querySelector('.ytp-skip-ad-button') || document.querySelector('.ytp-ad-skip-button-modern');
+      if (skipButton) {
+        skipButton.click();
+      }
+      // If ad is playing but no skip button, fast forward it
+      const video = document.querySelector('video');
+      const adShowing = document.querySelector('.ad-showing') || document.querySelector('.ad-interrupting');
+      if (adShowing && video && video.currentTime > 0 && !video.paused) {
+        video.playbackRate = 16; // Fast forward ads
+        video.muted = true;
+      } else if (video && video.playbackRate === 16) {
+        video.playbackRate = 1;
+        video.muted = false;
+      }
+    }, 500);
+  })();
+})();

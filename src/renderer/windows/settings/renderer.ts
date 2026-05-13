@@ -31,6 +31,8 @@ import "~assets/app.css";
 
 import { createApp } from "vue";
 import App from "./Index.vue";
+import i18n from "../../i18n";
 
 const app = createApp(App);
+app.use(i18n);
 app.mount("#app");

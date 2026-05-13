@@ -6,7 +6,7 @@ type ModelValue = {
   file: string;
   range: number;
   custom: never;
-  select: number;
+  select: string | number;
 };
 
 const props = defineProps<{
@@ -24,7 +24,7 @@ const props = defineProps<{
   disabledMessage?: string;
   flexColumn?: boolean;
   beta?: boolean;
-  optionsMap?: { [key: number]: string }; // This is for the select menu
+  optionsMap?: Record<string, string>; // Select keys are stringified in templates (numeric enums still work)
 }>();
 const emit = defineEmits(["update:modelValue", "file-change", "change", "clear"]);
 
@@ -45,12 +45,15 @@ const fileInput = ref(null);
 
 const selectOpen = ref(false);
 const selectedOption = computed(() => {
-  return props.optionsMap[props.modelValue as number];
+  if (!props.optionsMap || props.modelValue === undefined || props.modelValue === null) return "";
+  return props.optionsMap[String(props.modelValue)] ?? "";
 });
 
 // This function should be using ModelValue[T] but because it's bound to @click it doesn't interpret it as correct
 function select(optionKey: string) {
-  value.value = Number.parseInt(optionKey) as ModelValue[T];
+  const asNum = Number(optionKey);
+  const useNumber = !Number.isNaN(asNum) && String(asNum) === optionKey;
+  value.value = (useNumber ? asNum : optionKey) as ModelValue[T];
   selectOpen.value = false;
   emit("change");
 }

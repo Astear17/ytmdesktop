@@ -1,133 +1,334 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch, onBeforeMount, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import KeybindInput from "../../components/KeybindInput.vue";
 import YTMDSetting from "../../components/YTMDSetting.vue";
-import { StoreSchema, TrayIconStyle } from "~shared/store/schema";
+import { TrayIconStyle } from "~shared/store/schema";
 import { AuthToken } from "~shared/integrations/companion-server/types";
 import logo from "~assets/icons/ytmd.png";
 
 declare const YTMD_GIT_COMMIT_HASH: string;
 declare const YTMD_GIT_BRANCH: string;
 
-const ytmdVersion = await window.ytmd.getAppVersion();
-const ytmdCommitHash = YTMD_GIT_COMMIT_HASH.substring(0, 7);
-const ytmdBranch = YTMD_GIT_BRANCH;
+const { locale, t } = useI18n();
 
 const isDarwin = window.ytmd.isDarwin;
 const isLinux = window.ytmd.isLinux;
+const isWindows = window.ytmd.isWindows;
 
 const currentTab = ref(1);
 const requiresRestart = ref(false);
 const checkingForUpdate = ref(false);
-const updateAvailable = ref(await window.ytmd.isAppUpdateAvailable());
 const updateNotAvailable = ref(false);
-const updateDownloaded = ref(await window.ytmd.isAppUpdateDownloaded());
 
 const store = window.ytmd.store;
 const memoryStore = window.ytmd.memoryStore;
 const safeStorage = window.ytmd.safeStorage;
 
-const safeStorageAvailable = ref<boolean>(await memoryStore.get("safeStorageAvailable"));
+const language = ref("auto");
+const disableHardwareAcceleration = ref(false);
+const hideToTrayOnClose = ref(false);
+const showNotificationOnSongChange = ref(false);
+const startOnBoot = ref(false);
+const startMinimized = ref(false);
 
-const general: StoreSchema["general"] = await store.get("general");
-const appearance: StoreSchema["appearance"] = await store.get("appearance");
-const playback: StoreSchema["playback"] = await store.get("playback");
-const integrations: StoreSchema["integrations"] = await store.get("integrations");
-const shortcuts: StoreSchema["shortcuts"] = await store.get("shortcuts");
-const lastFM: StoreSchema["lastfm"] = await store.get("lastfm");
+const ytmdVersion = ref("");
+const ytmdCommitHash = ref("");
+const ytmdBranch = ref("");
+const updateAvailable = ref(false);
+const updateDownloaded = ref(false);
+const safeStorageAvailable = ref(false);
 
-const disableHardwareAcceleration = ref<boolean>(general.disableHardwareAcceleration);
-const hideToTrayOnClose = ref<boolean>(general.hideToTrayOnClose);
-const showNotificationOnSongChange = ref<boolean>(general.showNotificationOnSongChange);
-const startOnBoot = ref<boolean>(general.startOnBoot);
-const startMinimized = ref<boolean>(general.startMinimized);
+const alwaysShowVolumeSlider = ref(false);
+const customCSSEnabled = ref(false);
+const customCSSPath = ref("");
+const zoom = ref(100);
+const trayIconStyle = ref(0);
 
-const alwaysShowVolumeSlider = ref<boolean>(appearance.alwaysShowVolumeSlider);
-const customCSSEnabled = ref<boolean>(appearance.customCSSEnabled);
-const customCSSPath = ref<string>(appearance.customCSSPath);
-const zoom = ref<number>(appearance.zoom);
-const trayIconStyle = ref<number>(appearance.trayIconStyle);
+const continueWhereYouLeftOff = ref(false);
+const continueWhereYouLeftOffPaused = ref(false);
+const enableSpeakerFill = ref(false);
+const progressInTaskbar = ref(false);
+const ratioVolume = ref(false);
+const normalizationEnabled = ref(false);
+const eqGains = ref([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const audioOutputDeviceId = ref("default");
+const audioDevices = ref<{ [key: string]: string }>({});
 
-const continueWhereYouLeftOff = ref<boolean>(playback.continueWhereYouLeftOff);
-const continueWhereYouLeftOffPaused = ref<boolean>(playback.continueWhereYouLeftOffPaused);
-const enableSpeakerFill = ref<boolean>(playback.enableSpeakerFill);
-const progressInTaskbar = ref<boolean>(playback.progressInTaskbar);
-const ratioVolume = ref<boolean>(playback.ratioVolume);
+const languageSelectMap = computed(() => ({
+  auto: t("lang_auto"),
+  en: t("english"),
+  vi: t("vietnamese")
+}));
 
-const companionServerEnabled = ref<boolean>(integrations.companionServerEnabled);
-const companionServerAuthTokens = ref<AuthToken[]>(
-  safeStorageAvailable.value ? (JSON.parse(await safeStorage.decryptString(integrations.companionServerAuthTokens)) ?? []) : []
-);
-const companionServerCORSWildcardEnabled = ref<boolean>(integrations.companionServerCORSWildcardEnabled);
-const discordPresenceEnabled = ref<boolean>(integrations.discordPresenceEnabled);
-const lastFMEnabled = ref<boolean>(integrations.lastFMEnabled);
-const adblockerEnabled = ref<boolean>(integrations.adblockerEnabled ?? true);
-const youtubeNonStopEnabled = ref<boolean>(integrations.youtubeNonStopEnabled ?? true);
+const trayIconStyleSelectMap = computed(() => ({
+  [TrayIconStyle.Auto]: t("tray_auto"),
+  [TrayIconStyle.White]: t("tray_white"),
+  [TrayIconStyle.Black]: t("tray_black")
+}));
 
-const shortcutPlayPause = ref<string>(shortcuts.playPause);
-const shortcutNext = ref<string>(shortcuts.next);
-const shortcutPrevious = ref<string>(shortcuts.previous);
-const shortcutThumbsUp = ref<string>(shortcuts.thumbsUp);
-const shortcutThumbsDown = ref<string>(shortcuts.thumbsDown);
-const shortcutVolumeUp = ref<string>(shortcuts.volumeUp);
-const shortcutVolumeDown = ref<string>(shortcuts.volumeDown);
+const audioOutputDeviceMap = computed(() => ({
+  default: t("default_audio_device"),
+  ...audioDevices.value
+}));
+const crossfadeEnabled = ref(false);
+const crossfadeDuration = ref(5);
 
-const lastFMSessionKey = ref<string>(lastFM.sessionKey);
-const scrobblePercent = ref<number>(lastFM.scrobblePercent);
+const companionServerEnabled = ref(false);
+const companionServerAuthTokens = ref<AuthToken[]>([]);
+const companionServerCORSWildcardEnabled = ref(false);
+const discordPresenceEnabled = ref(false);
+const lastFMEnabled = ref(false);
+const adblockerEnabled = ref(true);
+const youtubeNonStopEnabled = ref(true);
+const sponsorBlockEnabled = ref(true);
+const lyricsTranslationEnabled = ref(false);
+const karaokeEnabled = ref(false);
 
-store.onDidAnyChange(async newState => {
-  disableHardwareAcceleration.value = newState.general.disableHardwareAcceleration;
-  hideToTrayOnClose.value = newState.general.hideToTrayOnClose;
-  showNotificationOnSongChange.value = newState.general.showNotificationOnSongChange;
-  startOnBoot.value = newState.general.startOnBoot;
-  startMinimized.value = newState.general.startMinimized;
+const enableDevTools = ref(false);
+const autoRebuildWindowsExe = ref(false);
+const isPackagedApp = ref(true);
 
-  alwaysShowVolumeSlider.value = newState.appearance.alwaysShowVolumeSlider;
-  customCSSEnabled.value = newState.appearance.customCSSEnabled;
-  customCSSPath.value = newState.appearance.customCSSPath;
-  zoom.value = newState.appearance.zoom;
-  trayIconStyle.value = newState.appearance.trayIconStyle;
+const discordPresenceConnectionFailed = ref(false);
+const shortcutsPlayPauseRegisterFailed = ref(false);
+const shortcutsNextRegisterFailed = ref(false);
+const shortcutsPreviousRegisterFailed = ref(false);
+const shortcutsThumbsUpRegisterFailed = ref(false);
+const shortcutsThumbsDownRegisterFailed = ref(false);
+const shortcutsVolumeUpRegisterFailed = ref(false);
+const shortcutsVolumeDownRegisterFailed = ref(false);
+const companionServerAuthWindowEnabled = ref(false);
+const autoUpdaterDisabled = ref(false);
 
-  continueWhereYouLeftOff.value = newState.playback.continueWhereYouLeftOff;
-  continueWhereYouLeftOffPaused.value = newState.playback.continueWhereYouLeftOffPaused;
-  enableSpeakerFill.value = newState.playback.enableSpeakerFill;
-  progressInTaskbar.value = newState.playback.progressInTaskbar;
-  ratioVolume.value = newState.playback.ratioVolume;
+const shortcutPlayPause = ref("");
+const shortcutNext = ref("");
+const shortcutPrevious = ref("");
+const shortcutThumbsUp = ref("");
+const shortcutThumbsDown = ref("");
+const shortcutVolumeUp = ref("");
+const shortcutVolumeDown = ref("");
 
-  companionServerEnabled.value = newState.integrations.companionServerEnabled;
-  companionServerAuthTokens.value = safeStorageAvailable.value
-    ? (JSON.parse(await safeStorage.decryptString(newState.integrations.companionServerAuthTokens)) ?? [])
-    : [];
-  companionServerCORSWildcardEnabled.value = newState.integrations.companionServerCORSWildcardEnabled;
-  discordPresenceEnabled.value = newState.integrations.discordPresenceEnabled;
-  lastFMEnabled.value = newState.integrations.lastFMEnabled;
-  adblockerEnabled.value = newState.integrations.adblockerEnabled ?? true;
-  youtubeNonStopEnabled.value = newState.integrations.youtubeNonStopEnabled ?? true;
-  lastFMSessionKey.value = newState.lastfm.sessionKey;
-  scrobblePercent.value = newState.lastfm.scrobblePercent;
+const lastFMSessionKey = ref("");
+const scrobblePercent = ref(50);
 
-  shortcutPlayPause.value = newState.shortcuts.playPause;
-  shortcutNext.value = newState.shortcuts.next;
-  shortcutPrevious.value = newState.shortcuts.previous;
-  shortcutThumbsUp.value = newState.shortcuts.thumbsUp;
-  shortcutThumbsDown.value = newState.shortcuts.thumbsDown;
-  shortcutVolumeUp.value = newState.shortcuts.volumeUp;
-  shortcutVolumeDown.value = newState.shortcuts.volumeDown;
+const eqFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+onBeforeMount(async () => {
+  try {
+    const [
+      version,
+      appUpdateAvailable,
+      appUpdateDownloaded,
+      safeAvailable,
+      generalStore,
+      appearanceStore,
+      playbackStore,
+      integrationsStore,
+      shortcutsStore,
+      lastfmStore,
+      developerStore,
+      discordFailed,
+      ppFailed,
+      nextFailed,
+      prevFailed,
+      tuFailed,
+      tdFailed,
+      vuFailed,
+      vdFailed,
+      authWindowEnabled,
+      updaterDisabled,
+      devices
+    ] = await Promise.all([
+      window.ytmd.getAppVersion(),
+      window.ytmd.isAppUpdateAvailable(),
+      window.ytmd.isAppUpdateDownloaded(),
+      memoryStore.get("safeStorageAvailable"),
+      store.get("general"),
+      store.get("appearance"),
+      store.get("playback"),
+      store.get("integrations"),
+      store.get("shortcuts"),
+      store.get("lastfm"),
+      store.get("developer"),
+      memoryStore.get("discordPresenceConnectionFailed"),
+      memoryStore.get("shortcutsPlayPauseRegisterFailed"),
+      memoryStore.get("shortcutsNextRegisterFailed"),
+      memoryStore.get("shortcutsPreviousRegisterFailed"),
+      memoryStore.get("shortcutsThumbsUpRegisterFailed"),
+      memoryStore.get("shortcutsThumbsDownRegisterFailed"),
+      memoryStore.get("shortcutsVolumeUpRegisterFailed"),
+      memoryStore.get("shortcutsVolumeDownRegisterFailed"),
+      memoryStore.get("companionServerAuthWindowEnabled"),
+      memoryStore.get("autoUpdaterDisabled"),
+      navigator.mediaDevices.enumerateDevices()
+    ]);
+
+    ytmdVersion.value = version;
+    ytmdCommitHash.value = (YTMD_GIT_COMMIT_HASH || "").substring(0, 7);
+    ytmdBranch.value = YTMD_GIT_BRANCH || "";
+    updateAvailable.value = appUpdateAvailable;
+    updateDownloaded.value = appUpdateDownloaded;
+    safeStorageAvailable.value = !!safeAvailable;
+
+    language.value = generalStore?.language || "auto";
+    disableHardwareAcceleration.value = !!generalStore?.disableHardwareAcceleration;
+    hideToTrayOnClose.value = !!generalStore?.hideToTrayOnClose;
+    showNotificationOnSongChange.value = !!generalStore?.showNotificationOnSongChange;
+    startOnBoot.value = !!generalStore?.startOnBoot;
+    startMinimized.value = !!generalStore?.startMinimized;
+
+    alwaysShowVolumeSlider.value = !!appearanceStore?.alwaysShowVolumeSlider;
+    customCSSEnabled.value = !!appearanceStore?.customCSSEnabled;
+    customCSSPath.value = appearanceStore?.customCSSPath || "";
+    zoom.value = appearanceStore?.zoom || 100;
+    trayIconStyle.value = appearanceStore?.trayIconStyle || 0;
+
+    continueWhereYouLeftOff.value = !!playbackStore?.continueWhereYouLeftOff;
+    continueWhereYouLeftOffPaused.value = !!playbackStore?.continueWhereYouLeftOffPaused;
+    enableSpeakerFill.value = !!playbackStore?.enableSpeakerFill;
+    progressInTaskbar.value = !!playbackStore?.progressInTaskbar;
+    ratioVolume.value = !!playbackStore?.ratioVolume;
+    normalizationEnabled.value = !!playbackStore?.normalizationEnabled;
+    eqGains.value = playbackStore?.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    audioOutputDeviceId.value = playbackStore?.audioOutputDeviceId || "default";
+    crossfadeEnabled.value = !!playbackStore?.crossfadeEnabled;
+    crossfadeDuration.value = playbackStore?.crossfadeDuration || 5;
+
+    companionServerEnabled.value = !!integrationsStore?.companionServerEnabled;
+    companionServerCORSWildcardEnabled.value = !!integrationsStore?.companionServerCORSWildcardEnabled;
+    discordPresenceEnabled.value = !!integrationsStore?.discordPresenceEnabled;
+    lastFMEnabled.value = !!integrationsStore?.lastFMEnabled;
+    adblockerEnabled.value = integrationsStore?.adblockerEnabled !== false;
+    youtubeNonStopEnabled.value = integrationsStore?.youtubeNonStopEnabled !== false;
+    sponsorBlockEnabled.value = integrationsStore?.sponsorBlockEnabled !== false;
+    lyricsTranslationEnabled.value = !!integrationsStore?.lyricsTranslationEnabled;
+    karaokeEnabled.value = !!integrationsStore?.karaokeEnabled;
+
+    enableDevTools.value = !!developerStore?.enableDevTools;
+    autoRebuildWindowsExe.value = !!developerStore?.autoRebuildWindowsExe;
+    isPackagedApp.value = (await window.ytmd.isPackaged?.()) ?? true;
+
+    if (safeStorageAvailable.value && integrationsStore?.companionServerAuthTokens) {
+      try {
+        const decrypted = await safeStorage.decryptString(integrationsStore.companionServerAuthTokens);
+        companionServerAuthTokens.value = JSON.parse(decrypted) || [];
+      } catch (e) {
+        console.error("Failed to decrypt tokens:", e);
+      }
+    }
+
+    discordPresenceConnectionFailed.value = !!discordFailed;
+    shortcutsPlayPauseRegisterFailed.value = !!ppFailed;
+    shortcutsNextRegisterFailed.value = !!nextFailed;
+    shortcutsPreviousRegisterFailed.value = !!prevFailed;
+    shortcutsThumbsUpRegisterFailed.value = !!tuFailed;
+    shortcutsThumbsDownRegisterFailed.value = !!tdFailed;
+    shortcutsVolumeUpRegisterFailed.value = !!vuFailed;
+    shortcutsVolumeDownRegisterFailed.value = !!vdFailed;
+    companionServerAuthWindowEnabled.value = !!authWindowEnabled;
+    autoUpdaterDisabled.value = !!updaterDisabled;
+
+    shortcutPlayPause.value = shortcutsStore?.playPause || "";
+    shortcutNext.value = shortcutsStore?.next || "";
+    shortcutPrevious.value = shortcutsStore?.previous || "";
+    shortcutThumbsUp.value = shortcutsStore?.thumbsUp || "";
+    shortcutThumbsDown.value = shortcutsStore?.thumbsDown || "";
+    shortcutVolumeUp.value = shortcutsStore?.volumeUp || "";
+    shortcutVolumeDown.value = shortcutsStore?.volumeDown || "";
+
+    lastFMSessionKey.value = lastfmStore?.sessionKey || "";
+    scrobblePercent.value = lastfmStore?.scrobblePercent || 50;
+
+    audioDevices.value = {};
+    devices
+      .filter(d => d.kind === "audiooutput")
+      .forEach(d => {
+        audioDevices.value[d.deviceId] = d.label || d.deviceId;
+      });
+
+    if (language.value === "auto") {
+      locale.value = navigator.language.startsWith("vi") ? "vi" : "en";
+    } else {
+      locale.value = language.value;
+    }
+
+    store.onDidAnyChange(async newState => {
+      disableHardwareAcceleration.value = !!newState.general.disableHardwareAcceleration;
+      hideToTrayOnClose.value = !!newState.general.hideToTrayOnClose;
+      showNotificationOnSongChange.value = !!newState.general.showNotificationOnSongChange;
+      startOnBoot.value = !!newState.general.startOnBoot;
+      startMinimized.value = !!newState.general.startMinimized;
+      language.value = newState.general.language || "auto";
+
+      alwaysShowVolumeSlider.value = !!newState.appearance.alwaysShowVolumeSlider;
+      customCSSEnabled.value = !!newState.appearance.customCSSEnabled;
+      customCSSPath.value = newState.appearance.customCSSPath;
+      zoom.value = newState.appearance.zoom;
+      trayIconStyle.value = newState.appearance.trayIconStyle;
+
+      continueWhereYouLeftOff.value = !!newState.playback.continueWhereYouLeftOff;
+      continueWhereYouLeftOffPaused.value = !!newState.playback.continueWhereYouLeftOffPaused;
+      enableSpeakerFill.value = !!newState.playback.enableSpeakerFill;
+      progressInTaskbar.value = !!newState.playback.progressInTaskbar;
+      ratioVolume.value = !!newState.playback.ratioVolume;
+      normalizationEnabled.value = !!newState.playback.normalizationEnabled;
+      eqGains.value = newState.playback.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      audioOutputDeviceId.value = newState.playback.audioOutputDeviceId || "default";
+      crossfadeEnabled.value = !!newState.playback.crossfadeEnabled;
+      crossfadeDuration.value = newState.playback.crossfadeDuration || 5;
+
+      companionServerEnabled.value = !!newState.integrations.companionServerEnabled;
+      companionServerCORSWildcardEnabled.value = !!newState.integrations.companionServerCORSWildcardEnabled;
+      discordPresenceEnabled.value = !!newState.integrations.discordPresenceEnabled;
+      lastFMEnabled.value = !!newState.integrations.lastFMEnabled;
+      adblockerEnabled.value = newState.integrations.adblockerEnabled !== false;
+      youtubeNonStopEnabled.value = newState.integrations.youtubeNonStopEnabled !== false;
+      sponsorBlockEnabled.value = newState.integrations.sponsorBlockEnabled !== false;
+      lyricsTranslationEnabled.value = !!newState.integrations.lyricsTranslationEnabled;
+      karaokeEnabled.value = !!newState.integrations.karaokeEnabled;
+
+      if (safeStorageAvailable.value && newState.integrations.companionServerAuthTokens) {
+        try {
+          const decrypted = await safeStorage.decryptString(newState.integrations.companionServerAuthTokens);
+          companionServerAuthTokens.value = JSON.parse(decrypted) || [];
+        } catch (err) {
+          console.error("Failed to decrypt tokens on store change:", err);
+        }
+      }
+
+      shortcutPlayPause.value = newState.shortcuts.playPause;
+      shortcutNext.value = newState.shortcuts.next;
+      shortcutPrevious.value = newState.shortcuts.previous;
+      shortcutThumbsUp.value = newState.shortcuts.thumbsUp;
+      shortcutThumbsDown.value = newState.shortcuts.thumbsDown;
+      shortcutVolumeUp.value = newState.shortcuts.volumeUp;
+      shortcutVolumeDown.value = newState.shortcuts.volumeDown;
+
+      lastFMSessionKey.value = newState.lastfm.sessionKey;
+      scrobblePercent.value = newState.lastfm.scrobblePercent;
+
+      enableDevTools.value = !!newState.developer.enableDevTools;
+      autoRebuildWindowsExe.value = !!newState.developer.autoRebuildWindowsExe;
+    });
+
+    loading.value = false;
+  } catch (e) {
+    console.error("Critical error loading settings:", e);
+    error.value = e instanceof Error ? e.message : String(e);
+    loading.value = false;
+  }
 });
 
-const discordPresenceConnectionFailed = ref<boolean>(await memoryStore.get("discordPresenceConnectionFailed"));
-
-const shortcutsPlayPauseRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsPlayPauseRegisterFailed"));
-const shortcutsNextRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsNextRegisterFailed"));
-const shortcutsPreviousRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsPreviousRegisterFailed"));
-const shortcutsThumbsUpRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsThumbsUpRegisterFailed"));
-const shortcutsThumbsDownRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsThumbsDownRegisterFailed"));
-const shortcutsVolumeUpRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsVolumeUpRegisterFailed"));
-const shortcutsVolumeDownRegisterFailed = ref<boolean>(await memoryStore.get("shortcutsVolumeDownRegisterFailed"));
-
-const companionServerAuthWindowEnabled = ref<boolean>(await memoryStore.get("companionServerAuthWindowEnabled"));
-
-const autoUpdaterDisabled = ref<boolean>(await memoryStore.get("autoUpdaterDisabled"));
+watch(language, newLang => {
+  if (newLang === "auto") {
+    locale.value = navigator.language.startsWith("vi") ? "vi" : "en";
+  } else {
+    locale.value = newLang;
+  }
+});
 
 memoryStore.onStateChanged(newState => {
   discordPresenceConnectionFailed.value = newState.discordPresenceConnectionFailed;
@@ -156,6 +357,7 @@ async function settingsChanged() {
   store.set("general.showNotificationOnSongChange", showNotificationOnSongChange.value);
   store.set("general.startOnBoot", startOnBoot.value);
   store.set("general.startMinimized", startMinimized.value);
+  store.set("general.language", language.value);
   store.set("general.disableHardwareAcceleration", disableHardwareAcceleration.value);
 
   store.set("appearance.alwaysShowVolumeSlider", alwaysShowVolumeSlider.value);
@@ -168,6 +370,11 @@ async function settingsChanged() {
   store.set("playback.progressInTaskbar", progressInTaskbar.value);
   store.set("playback.enableSpeakerFill", enableSpeakerFill.value);
   store.set("playback.ratioVolume", ratioVolume.value);
+  store.set("playback.normalizationEnabled", normalizationEnabled.value);
+  store.set("playback.eqGains", JSON.parse(JSON.stringify(eqGains.value)));
+  store.set("playback.audioOutputDeviceId", audioOutputDeviceId.value);
+  store.set("playback.crossfadeEnabled", crossfadeEnabled.value);
+  store.set("playback.crossfadeDuration", crossfadeDuration.value);
 
   store.set("integrations.companionServerEnabled", companionServerEnabled.value);
   store.set("integrations.companionServerCORSWildcardEnabled", companionServerCORSWildcardEnabled.value);
@@ -175,6 +382,9 @@ async function settingsChanged() {
   store.set("integrations.lastFMEnabled", lastFMEnabled.value);
   store.set("integrations.adblockerEnabled", adblockerEnabled.value);
   store.set("integrations.youtubeNonStopEnabled", youtubeNonStopEnabled.value);
+  store.set("integrations.sponsorBlockEnabled", sponsorBlockEnabled.value);
+  store.set("integrations.lyricsTranslationEnabled", lyricsTranslationEnabled.value);
+  store.set("integrations.karaokeEnabled", karaokeEnabled.value);
   store.set("lastfm.scrobblePercent", scrobblePercent.value);
 
   store.set("shortcuts.playPause", shortcutPlayPause.value);
@@ -184,6 +394,9 @@ async function settingsChanged() {
   store.set("shortcuts.thumbsDown", shortcutThumbsDown.value);
   store.set("shortcuts.volumeUp", shortcutVolumeUp.value);
   store.set("shortcuts.volumeDown", shortcutVolumeDown.value);
+
+  store.set("developer.enableDevTools", enableDevTools.value);
+  store.set("developer.autoRebuildWindowsExe", autoRebuildWindowsExe.value);
 }
 
 async function settingChangedRequiresRestart() {
@@ -271,96 +484,167 @@ window.ytmd.handleUpdateDownloaded(() => {
   updateAvailable.value = false;
   updateDownloaded.value = true;
 });
+
+async function clearCache() {
+  await window.ytmd.clearCache();
+  alert(t("cache_cleared"));
+}
 </script>
 
 <template>
   <div class="settings-container">
-    <div class="content-container">
+    <div v-if="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <p>{{ $t("loading_settings") }}</p>
+    </div>
+    <div v-else-if="error" class="error-overlay">
+      <span class="material-symbols-outlined">error</span>
+      <p>{{ $t("error_prefix") }}: {{ error }}</p>
+      <button @click="restartApplication">{{ $t("restart_application_btn") }}</button>
+    </div>
+    <div v-else class="content-container">
       <ul class="sidebar">
-        <li :class="{ active: currentTab === 1 }" @click="changeTab(1)"><span class="material-symbols-outlined">settings_applications</span>General</li>
-        <li :class="{ active: currentTab === 2 }" @click="changeTab(2)"><span class="material-symbols-outlined">brush</span>Appearance</li>
-        <li :class="{ active: currentTab === 3 }" @click="changeTab(3)"><span class="material-symbols-outlined">music_note</span>Playback</li>
-        <li :class="{ active: currentTab === 4 }" @click="changeTab(4)"><span class="material-symbols-outlined">wifi_tethering</span>Integrations</li>
-        <li :class="{ active: currentTab === 5 }" @click="changeTab(5)"><span class="material-symbols-outlined">keyboard</span>Shortcuts</li>
+        <li :class="{ active: currentTab === 1 }" @click="changeTab(1)">
+          <span class="material-symbols-outlined">settings_applications</span>{{ $t("general") }}
+        </li>
+        <li :class="{ active: currentTab === 2 }" @click="changeTab(2)"><span class="material-symbols-outlined">brush</span>{{ $t("appearance") }}</li>
+        <li :class="{ active: currentTab === 3 }" @click="changeTab(3)"><span class="material-symbols-outlined">music_note</span>{{ $t("playback") }}</li>
+        <li :class="{ active: currentTab === 4 }" @click="changeTab(4)">
+          <span class="material-symbols-outlined">wifi_tethering</span>{{ $t("integrations") }}
+        </li>
+        <li :class="{ active: currentTab === 5 }" @click="changeTab(5)"><span class="material-symbols-outlined">keyboard</span>{{ $t("shortcuts") }}</li>
         <span class="push"></span>
-        <li :class="{ active: currentTab === 99 }" @click="changeTab(99)"><span class="material-symbols-outlined">info</span>About</li>
+        <li :class="{ active: currentTab === 6 }" @click="changeTab(6)"><span class="material-symbols-outlined">code</span>{{ $t("developer") }}</li>
+        <li :class="{ active: currentTab === 99 }" @click="changeTab(99)"><span class="material-symbols-outlined">info</span>{{ $t("about") }}</li>
       </ul>
       <div class="content">
         <div v-if="requiresRestart" class="restart-banner">
-          <p class="message"><span class="material-symbols-outlined">autorenew</span> Restart app to apply changes</p>
-          <button class="restart-button" @click="restartApplication">Restart</button>
+          <p class="message"><span class="material-symbols-outlined">autorenew</span> {{ $t("restart_required") }}</p>
+          <button class="restart-button" @click="restartApplication">{{ $t("restart") }}</button>
         </div>
         <div v-if="currentTab === 1" class="general-tab">
-          <YTMDSetting v-if="!isDarwin" v-model="hideToTrayOnClose" type="checkbox" name="Hide to tray on close" @change="settingsChanged" />
-          <YTMDSetting v-model="showNotificationOnSongChange" type="checkbox" name="Show notification on song change" @change="settingsChanged" />
-          <YTMDSetting v-model="startOnBoot" type="checkbox" name="Start on boot" @change="settingsChanged" />
-          <!--<div class="setting">
-            <p>Start minimized</p>
-            <input v-model="startMinimized" @change="settingsChanged" class="toggle" type="checkbox" />
-          </div>-->
+          <YTMDSetting v-model="language" :options-map="languageSelectMap" type="select" :name="$t('language')" @change="settingsChanged" />
+          <YTMDSetting v-if="!isDarwin" v-model="hideToTrayOnClose" type="checkbox" :name="$t('hide_to_tray')" @change="settingsChanged" />
+          <YTMDSetting v-model="showNotificationOnSongChange" type="checkbox" :name="$t('show_notifications')" @change="settingsChanged" />
+          <YTMDSetting v-model="startOnBoot" type="checkbox" :name="$t('start_on_boot')" @change="settingsChanged" />
           <YTMDSetting
             v-model="disableHardwareAcceleration"
             type="checkbox"
             restart-required
-            name="Disable hardware acceleration"
+            :name="$t('disable_hardware_acceleration')"
             @change="settingChangedRequiresRestart"
           />
+          <div class="setting indented">
+            <p class="name">{{ $t("application_cache") }}</p>
+            <button @click="clearCache">{{ $t("clear_cache") }}</button>
+          </div>
         </div>
 
         <div v-if="currentTab === 2" class="appearance-tab">
-          <YTMDSetting v-model="alwaysShowVolumeSlider" type="checkbox" name="Always show volume slider" @change="settingsChanged" />
-          <YTMDSetting v-model="customCSSEnabled" type="checkbox" name="Custom CSS" @change="settingsChanged" />
+          <YTMDSetting v-model="alwaysShowVolumeSlider" type="checkbox" :name="$t('always_show_volume')" @change="settingsChanged" />
+          <YTMDSetting v-model="customCSSEnabled" type="checkbox" :name="$t('custom_css')" @change="settingsChanged" />
           <YTMDSetting
             v-if="customCSSEnabled"
             v-model="customCSSPath"
             type="file"
             indented
             bind-setting="appearance.customCSSPath"
-            name="Custom CSS file path"
+            :name="$t('custom_css_path')"
             @file-change="settingChangedFile"
             @clear="removeCustomCSSPath"
           />
-          <YTMDSetting v-model="zoom" type="range" max="300" min="30" step="10" name="Zoom" @change="settingsChanged" />
+          <YTMDSetting v-model="zoom" type="range" max="300" min="30" step="10" :name="$t('zoom')" @change="settingsChanged" />
           <YTMDSetting
             v-if="isLinux"
             v-model="trayIconStyle"
-            :options-map="{ [TrayIconStyle.Auto]: 'Auto', [TrayIconStyle.White]: 'White', [TrayIconStyle.Black]: 'Black' }"
+            :options-map="trayIconStyleSelectMap"
             type="select"
-            name="Tray icon style"
+            :name="$t('tray_icon_style')"
             @change="settingsChanged"
           />
         </div>
 
         <div v-if="currentTab === 3" class="playback-tab">
-          <YTMDSetting v-model="continueWhereYouLeftOff" name="Continue where you left off" type="checkbox" @change="settingsChanged" />
+          <YTMDSetting v-model="continueWhereYouLeftOff" :name="$t('continue_where_left_off')" type="checkbox" @change="settingsChanged" />
           <YTMDSetting
             v-if="continueWhereYouLeftOff"
             v-model="continueWhereYouLeftOffPaused"
             type="checkbox"
             indented
-            name="Pause on application launch"
+            :name="$t('pause_on_launch')"
             @change="settingsChanged"
           />
-          <YTMDSetting v-model="progressInTaskbar" type="checkbox" name="Show track progress on taskbar" @change="settingsChanged" />
-          <YTMDSetting v-model="enableSpeakerFill" type="checkbox" restart-required name="Enable speaker fill" @change="settingChangedRequiresRestart" />
-          <YTMDSetting v-model="ratioVolume" type="checkbox" name="Ratio volume" @change="settingsChanged" />
+          <YTMDSetting v-model="progressInTaskbar" type="checkbox" :name="$t('show_track_progress')" @change="settingsChanged" />
+          <YTMDSetting v-model="enableSpeakerFill" type="checkbox" restart-required :name="$t('enable_speaker_fill')" @change="settingChangedRequiresRestart" />
+          <YTMDSetting v-model="ratioVolume" type="checkbox" :name="$t('ratio_volume')" @change="settingsChanged" />
+          <YTMDSetting
+            v-model="audioOutputDeviceId"
+            :options-map="audioOutputDeviceMap"
+            type="select"
+            :name="$t('audio_output_device')"
+            @change="settingsChanged"
+          />
+          <YTMDSetting v-model="crossfadeEnabled" type="checkbox" :name="$t('crossfade_title')" :description="$t('crossfade_desc')" @change="settingsChanged" />
+          <YTMDSetting
+            v-if="crossfadeEnabled"
+            v-model="crossfadeDuration"
+            type="range"
+            max="15"
+            min="1"
+            step="1"
+            indented
+            :name="$t('transition_duration')"
+            @change="settingsChanged"
+          />
+          <YTMDSetting
+            v-model="normalizationEnabled"
+            type="checkbox"
+            :name="$t('audio_normalization')"
+            :description="$t('audio_normalization_desc')"
+            @change="settingsChanged"
+          />
+
+          <div class="setting flex-column">
+            <p class="name">{{ $t("builtin_eq") }}</p>
+            <div class="eq-container">
+              <div v-for="(freq, index) in eqFrequencies" :key="freq" class="eq-band">
+                <input v-model.number="eqGains[index]" type="range" orient="vertical" min="-12" max="12" step="1" @input="settingsChanged" />
+                <span class="eq-label">{{ freq >= 1000 ? freq / 1000 + "k" : freq }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-if="currentTab === 4" class="integrations-tab">
-          <YTMDSetting v-model="adblockerEnabled" type="checkbox" name="Adblocker" @change="settingsChanged" />
+          <YTMDSetting v-model="adblockerEnabled" type="checkbox" :name="$t('adblocker')" @change="settingsChanged" />
           <YTMDSetting
             v-model="youtubeNonStopEnabled"
             type="checkbox"
-            name="YouTube NonStop"
-            description="Automatically clicks 'Continue watching?' dialog"
+            :name="$t('youtube_nonstop')"
+            :description="$t('youtube_nonstop_desc')"
             @change="settingsChanged"
           />
           <YTMDSetting
+            v-model="sponsorBlockEnabled"
+            type="checkbox"
+            :name="$t('sponsorblock')"
+            :description="$t('sponsorblock_desc')"
+            @change="settingsChanged"
+          />
+          <YTMDSetting
+            v-model="lyricsTranslationEnabled"
+            type="checkbox"
+            :name="$t('lyrics_translation')"
+            :description="$t('lyrics_translation_desc')"
+            @change="settingsChanged"
+          />
+          <YTMDSetting v-model="karaokeEnabled" type="checkbox" :name="$t('karaoke')" :description="$t('karaoke_desc')" @change="settingsChanged" />
+          <YTMDSetting
             v-model="companionServerEnabled"
             type="checkbox"
-            name="Companion server"
+            :name="$t('companion_server')"
             :disabled="!safeStorageAvailable"
-            disabled-message="This integration cannot be enabled due to safeStorage being unavailable"
+            :disabled-message="$t('companion_disabled_safe')"
             @change="settingsChanged"
           />
           <YTMDSetting
@@ -368,8 +652,8 @@ window.ytmd.handleUpdateDownloaded(() => {
             v-model="companionServerCORSWildcardEnabled"
             type="checkbox"
             indented
-            name="Allow browser communication"
-            description="This setting could be dangerous as it allows any website you visit to communicate with the companion server"
+            :name="$t('allow_browser_comm')"
+            :description="$t('allow_browser_comm_desc')"
             @change="settingsChanged"
           />
           <YTMDSetting
@@ -377,8 +661,8 @@ window.ytmd.handleUpdateDownloaded(() => {
             v-model="companionServerAuthWindowEnabled"
             type="checkbox"
             indented
-            name="Enable companion authorization"
-            description="Automatically disables after the first successful authorization or 5 minutes has passed"
+            :name="$t('companion_auth')"
+            :description="$t('companion_auth_desc')"
             @change="memorySettingsChanged"
           />
           <YTMDSetting
@@ -386,16 +670,16 @@ window.ytmd.handleUpdateDownloaded(() => {
             type="custom"
             flex-column
             indented
-            name="Authorized companions"
-            description="This is a list of companions that currently have access to the companion server"
+            :name="$t('authorized_companions')"
+            :description="$t('authorized_companions_desc')"
             @change="settingsChanged"
           >
             <table class="authorized-companions-table">
               <thead>
                 <tr>
-                  <th class="companion">Companion</th>
-                  <th class="version">Version</th>
-                  <th class="controls"></th>
+                  <th class="companion">{{ $t("col_companion") }}</th>
+                  <th class="version">{{ $t("col_version") }}</th>
+                  <th class="controls">{{ $t("col_controls") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -413,39 +697,39 @@ window.ytmd.handleUpdateDownloaded(() => {
               </tbody>
             </table>
             <div v-if="companionServerAuthTokens.length === 0" class="no-authorized-companions">
-              <td>No authorized companions</td>
+              {{ $t("no_authorized_companions") }}
             </div>
           </YTMDSetting>
-          <YTMDSetting v-model="discordPresenceEnabled" type="checkbox" name="Discord rich presence" @change="settingsChanged" />
+          <YTMDSetting v-model="discordPresenceEnabled" type="checkbox" :name="$t('discord_presence')" @change="settingsChanged" />
           <div v-if="discordPresenceEnabled && discordPresenceConnectionFailed" class="setting indented">
-            <p class="discord-failure">Discord connection could not be established after 30 attempts</p>
-            <button @click="restartDiscordPresence">Retry</button>
+            <p class="discord-failure">{{ $t("discord_connection_failed") }}</p>
+            <button @click="restartDiscordPresence">{{ $t("retry") }}</button>
           </div>
           <YTMDSetting
             v-model="lastFMEnabled"
             type="checkbox"
-            name="Last.fm scrobbling"
+            :name="$t('lastfm_scrobbling')"
             :disabled="!safeStorageAvailable"
-            disabled-message="This integration cannot be enabled due to safeStorage being unavailable"
+            :disabled-message="$t('companion_disabled_safe')"
             @change="settingsChanged"
           />
           <div v-if="lastFMEnabled" class="setting indented">
             <div class="name-with-description">
               <p class="description">
-                User is Authenticated:
-                <span v-if="lastFMSessionKey" style="color: #4caf50">Yes</span>
-                <span v-else style="color: #ff1100">No</span>
+                {{ $t("lastfm_user_authenticated") }}
+                <span v-if="lastFMSessionKey" style="color: #4caf50">{{ $t("yes") }}</span>
+                <span v-else style="color: #ff1100">{{ $t("no") }}</span>
               </p>
             </div>
-            <button v-if="lastFMSessionKey" @click="logoutLastFM">Logout</button>
+            <button v-if="lastFMSessionKey" @click="logoutLastFM">{{ $t("logout") }}</button>
           </div>
           <YTMDSetting
             v-if="lastFMEnabled"
             v-model="scrobblePercent"
             class="settings indented"
             type="range"
-            name="Scrobble percent"
-            description="Determines when a song is scrobbled"
+            :name="$t('scrobble_percent')"
+            :description="$t('scrobble_percent_desc')"
             min="50"
             max="95"
             step="5"
@@ -456,10 +740,8 @@ window.ytmd.handleUpdateDownloaded(() => {
         <div v-if="currentTab === 5" class="shortcuts-tab">
           <div class="setting">
             <p class="shortcut-title">
-              Play/Pause<span
-                v-if="shortcutsPlayPauseRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_play_pause")
+              }}<span v-if="shortcutsPlayPauseRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -467,21 +749,15 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Next<span
-                v-if="shortcutsNextRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
-                >error</span
-              >
+              {{ $t("shortcut_next")
+              }}<span v-if="shortcutsNextRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')">error</span>
             </p>
             <KeybindInput v-model="shortcutNext" @change="settingsChanged" />
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Previous<span
-                v-if="shortcutsPreviousRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_previous")
+              }}<span v-if="shortcutsPreviousRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -489,10 +765,8 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Thumbs Up<span
-                v-if="shortcutsThumbsUpRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_thumbs_up")
+              }}<span v-if="shortcutsThumbsUpRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -500,10 +774,8 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Thumbs Down<span
-                v-if="shortcutsThumbsDownRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_thumbs_down")
+              }}<span v-if="shortcutsThumbsDownRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -511,10 +783,8 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Increase Volume<span
-                v-if="shortcutsVolumeUpRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_vol_up")
+              }}<span v-if="shortcutsVolumeUpRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -522,10 +792,8 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
           <div class="setting">
             <p class="shortcut-title">
-              Decrease Volume<span
-                v-if="shortcutsVolumeDownRegisterFailed"
-                class="material-symbols-outlined register-error"
-                title="Failed to register keybind. Does another application have this keybind?"
+              {{ $t("shortcut_vol_down")
+              }}<span v-if="shortcutsVolumeDownRegisterFailed" class="material-symbols-outlined register-error" :title="$t('keybind_register_failed')"
                 >error</span
               >
             </p>
@@ -533,11 +801,24 @@ window.ytmd.handleUpdateDownloaded(() => {
           </div>
         </div>
 
+        <div v-if="currentTab === 6" class="developer-tab">
+          <p v-if="isPackagedApp" class="developer-packaged-hint">{{ $t("developer_packaged_hint") }}</p>
+          <YTMDSetting v-model="enableDevTools" type="checkbox" restart-required :name="$t('developer_tools')" @change="settingChangedRequiresRestart" />
+          <YTMDSetting
+            v-model="autoRebuildWindowsExe"
+            type="checkbox"
+            :disabled="isPackagedApp || !isWindows"
+            :name="$t('auto_rebuild_windows_exe')"
+            :description="$t('auto_rebuild_windows_exe_desc')"
+            @change="settingsChanged"
+          />
+        </div>
+
         <div v-if="currentTab === 99" class="about-tab">
           <img class="icon" :src="logo" />
-          <h2 class="app-name">YouTube Music Desktop App</h2>
-          <p class="made-by">Made by YTMDesktop Team</p>
-          <p class="forked-by">Forked by Astear17</p>
+          <h2 class="app-name">{{ $t("about_app_title") }}</h2>
+          <p class="made-by">{{ $t("made_by") }}</p>
+          <p class="forked-by">{{ $t("forked_by") }}</p>
           <template v-if="!autoUpdaterDisabled">
             <button
               v-if="!updateDownloaded"
@@ -545,31 +826,31 @@ window.ytmd.handleUpdateDownloaded(() => {
               class="update-check-button"
               @click="checkForUpdates"
             >
-              <span class="material-symbols-outlined">update</span>Check for updates
+              <span class="material-symbols-outlined">update</span>{{ $t("check_updates") }}
             </button>
             <button v-if="updateDownloaded" class="update-button" @click="restartApplicationForUpdate">
-              <span class="material-symbols-outlined">upgrade</span>Restart to update
+              <span class="material-symbols-outlined">upgrade</span>{{ $t("restart_to_update") }}
             </button>
             <p v-if="checkingForUpdate && !updateAvailable && !updateDownloaded" class="updating">
-              <span class="material-symbols-outlined">progress_activity</span>Checking for updates...
+              <span class="material-symbols-outlined">progress_activity</span>{{ $t("checking_updates") }}
             </p>
             <p v-if="updateAvailable && !updateDownloaded" class="updating">
-              <span class="material-symbols-outlined">progress_activity</span>Downloading update...
+              <span class="material-symbols-outlined">progress_activity</span>{{ $t("downloading_update") }}
             </p>
-            <p v-if="updateNotAvailable" class="no-update">Update not available</p>
+            <p v-if="updateNotAvailable" class="no-update">{{ $t("update_not_available") }}</p>
           </template>
           <template v-if="autoUpdaterDisabled">
-            <button disabled class="update-check-button"><span class="material-symbols-outlined">update</span>Check for updates</button>
-            <p class="no-auto-updater">Auto updater disabled</p>
+            <button disabled class="update-check-button"><span class="material-symbols-outlined">update</span>{{ $t("check_updates") }}</button>
+            <p class="no-auto-updater">{{ $t("auto_updater_disabled") }}</p>
           </template>
           <span class="version-info">
-            <p class="version">Version: {{ ytmdVersion }}</p>
-            <p class="branch">Branch: {{ ytmdBranch }}</p>
-            <p class="commit">Commit: {{ ytmdCommitHash }}</p>
+            <p class="version">{{ $t("version_label") }}: {{ ytmdVersion }}</p>
+            <p class="branch">{{ $t("branch_label") }}: {{ ytmdBranch }}</p>
+            <p class="commit">{{ $t("commit_label") }}: {{ ytmdCommitHash }}</p>
           </span>
           <div class="links">
-            <a href="https://github.com/ytmdesktop/ytmdesktop" target="_blank">GitHub</a>
-            <a href="https://ytmdesktop.github.io/" target="_blank">Website</a>
+            <a href="https://github.com/ytmdesktop/ytmdesktop" target="_blank">{{ $t("about_github") }}</a>
+            <a href="https://ytmdesktop.github.io/" target="_blank">{{ $t("about_website") }}</a>
           </div>
         </div>
       </div>
@@ -580,16 +861,24 @@ window.ytmd.handleUpdateDownloaded(() => {
 <style scoped>
 .settings-container {
   user-select: none;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  background-color: #000000;
+  display: flex;
+  flex-direction: column;
 }
 
 .content-container {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .content {
   overflow: auto;
-  flex-grow: 1;
+  flex: 1;
+  min-height: 0;
   padding: 4px 16px;
 }
 
@@ -611,7 +900,8 @@ window.ytmd.handleUpdateDownloaded(() => {
   list-style-type: none;
   margin: unset;
   padding: unset;
-  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
   border-right: 1px solid #212121;
   display: flex;
   flex-direction: column;
@@ -655,6 +945,33 @@ window.ytmd.handleUpdateDownloaded(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.eq-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 0;
+}
+
+.eq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.eq-band input[type="range"] {
+  writing-mode: bt-lr; /* IE */
+  appearance: slider-vertical;
+  width: 8px;
+  height: 100px;
+  margin-bottom: 8px;
+}
+
+.eq-label {
+  font-size: 10px;
+  color: #888;
 }
 
 .setting.indented {
@@ -880,6 +1197,42 @@ button {
 
 .shortcuts-tab .shortcut-title .register-error {
   margin-left: 4px;
+  color: #f44336;
+}
+
+.developer-packaged-hint {
+  margin: 0 0 12px 0;
+  padding: 12px;
+  border-radius: 4px;
+  background-color: #212121;
+  color: #bbbbbb;
+  line-height: 1.4;
+}
+
+.loading-overlay,
+.error-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  gap: 16px;
+  color: #ffffff;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left-color: #ff0000;
+  border-radius: 50%;
+  animation: rotation 1s infinite linear;
+}
+
+.error-overlay .material-symbols-outlined {
+  font-size: 48px;
   color: #f44336;
 }
 </style>

@@ -50,6 +50,9 @@ declare global {
       handleUpdateDownloaded(callback: (event: Electron.IpcRendererEvent) => void);
       isAppUpdateAvailable(): Promise<boolean>;
       isAppUpdateDownloaded(): Promise<boolean>;
+      getAccentColor(): Promise<string | null>;
+      clearCache(): Promise<boolean>;
+      isPackaged?(): Promise<boolean>;
     };
   }
 

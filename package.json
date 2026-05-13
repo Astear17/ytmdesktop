@@ -1,14 +1,15 @@
 {
   "name": "youtube-music-desktop-app",
   "productName": "YouTube Music Desktop App",
-  "version": "2.0.26",
+  "version": "3.0.0",
   "description": "YouTube Music Desktop App",
   "main": ".vite/main/index.js",
   "private": true,
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
+    "make": "electron-forge make && node scripts/rename-artifacts.mjs",
+    "watch:make": "chokidar \"src/**/*\" \"forge.config.ts\" \"viteconfig/**/*\" -c \"node scripts/bump-version-patch.mjs && yarn make\" -d 90000",
     "publish:dry": "electron-forge publish --dry-run",
     "publish:fromdry": "electron-forge publish --from-dry-run",
     "publish": "electron-forge publish",
@@ -40,6 +41,7 @@
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "@vitejs/plugin-vue": "^5.2.4",
+    "chokidar-cli": "^3.0.0",
     "electron": "^40.4.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
@@ -70,6 +72,7 @@
     "socket.io": "^4.8.3",
     "tr46": "^6.0.0",
     "vue": "^3.5.28",
+    "vue-i18n": "^9.14.5",
     "webidl-conversions": "^8.0.1"
   },
   "lint-staged": {

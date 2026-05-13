@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { onBeforeMount, ref } from "vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const props = defineProps({
   title: {
@@ -74,11 +77,11 @@ if (props.isMainWindow) {
       <div class="title">
         <span v-if="icon" class="icon material-symbols-outlined">{{ icon }}</span>
         <img v-if="iconFile" class="icon" :src="iconFile" />
-        <p v-if="title && !centerTitleText" class="title-text">{{ title }}{{ ytmViewUnresponsive ? " (Unresponsive)" : "" }}</p>
+        <p v-if="title && !centerTitleText" class="title-text">{{ title }}{{ ytmViewUnresponsive ? ` ${t("unresponsive_suffix")}` : "" }}</p>
       </div>
     </div>
     <div v-if="title && centerTitleText" class="center">
-      <p class="title-text">{{ title }}{{ ytmViewUnresponsive ? " (Unresponsive)" : "" }}</p>
+      <p class="title-text">{{ title }}{{ ytmViewUnresponsive ? ` ${t("unresponsive_suffix")}` : "" }}</p>
     </div>
     <div class="right">
       <div v-if="isMainWindow" class="update-buttons">
@@ -86,7 +89,7 @@ if (props.isMainWindow) {
           v-if="appUpdateDownloaded"
           class="app-button update-button"
           tabindex="1"
-          title="Update ready! Click to restart"
+          :title="t('titlebar_update_ready')"
           @click="restartApplicationForUpdate"
         >
           <span class="material-symbols-outlined">upgrade</span>
@@ -177,11 +180,14 @@ if (props.isMainWindow) {
 }
 
 .title-text {
-  font-family: "Open Sans", sans-serif;
-  min-width: 0;
+  font-family: var(--font-family), "Google Sans", "Roboto", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #eeeeee;
+  margin-left: 8px;
   white-space: nowrap;
   overflow: hidden;
-  font-size: 14px;
+  text-overflow: ellipsis;
 }
 
 .app-button {
@@ -205,7 +211,7 @@ if (props.isMainWindow) {
 }
 
 .app-button:hover {
-  background-color: #222222;
+  background-color: var(--system-accent-color, #222222);
 }
 
 .app-button > .material-symbols-outlined {
@@ -249,7 +255,7 @@ if (props.isMainWindow) {
 }
 
 .action-button:hover {
-  background-color: #222222;
+  background-color: var(--system-accent-color, #222222);
 }
 
 .action-button > .material-symbols-outlined {

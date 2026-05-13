@@ -14,6 +14,7 @@ export type StoreSchema = {
     showNotificationOnSongChange: boolean;
     startOnBoot: boolean;
     startMinimized: boolean;
+    language: string;
   };
   appearance: {
     alwaysShowVolumeSlider: boolean;
@@ -21,6 +22,7 @@ export type StoreSchema = {
     customCSSPath: string | null;
     zoom: number;
     trayIconStyle: TrayIconStyle;
+    visualizerEnabled: boolean;
   };
   playback: {
     continueWhereYouLeftOff: boolean;
@@ -28,6 +30,11 @@ export type StoreSchema = {
     enableSpeakerFill: boolean;
     progressInTaskbar: boolean;
     ratioVolume: boolean;
+    normalizationEnabled: boolean;
+    eqGains: number[];
+    audioOutputDeviceId: string;
+    crossfadeEnabled: boolean;
+    crossfadeDuration: number;
   };
   integrations: {
     companionServerEnabled: boolean;
@@ -37,6 +44,9 @@ export type StoreSchema = {
     lastFMEnabled: boolean;
     adblockerEnabled: boolean;
     youtubeNonStopEnabled: boolean;
+    sponsorBlockEnabled: boolean;
+    lyricsTranslationEnabled: boolean;
+    karaokeEnabled: boolean;
   };
   shortcuts: {
     playPause: string;
@@ -63,6 +73,8 @@ export type StoreSchema = {
   };
   developer: {
     enableDevTools: boolean;
+    /** Dev builds only (unpackaged): watch project files and re-run `yarn make` (Windows installer) after edits. */
+    autoRebuildWindowsExe: boolean;
   };
 };
 

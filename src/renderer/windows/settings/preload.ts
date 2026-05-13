@@ -45,5 +45,8 @@ contextBridge.exposeInMainWorld("ytmd", {
   handleUpdateDownloaded: (callback: (event: Electron.IpcRendererEvent) => void) => ipcRenderer.on("app:updateDownloaded", callback),
   isAppUpdateAvailable: async (): Promise<boolean> => await ipcRenderer.invoke("app:isUpdateAvailable"),
   isAppUpdateDownloaded: async (): Promise<boolean> => await ipcRenderer.invoke("app:isUpdateDownloaded"),
-  getTrueFilePath: (file: File) => webUtils.getPathForFile(file)
+  getTrueFilePath: (file: File) => webUtils.getPathForFile(file),
+  getAccentColor: () => ipcRenderer.invoke("app:getAccentColor"),
+  clearCache: () => ipcRenderer.invoke("app:clearCache"),
+  isPackaged: (): Promise<boolean> => ipcRenderer.invoke("app:isPackaged")
 });

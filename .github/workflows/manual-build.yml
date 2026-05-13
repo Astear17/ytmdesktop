@@ -45,31 +45,37 @@ jobs:
       - name: Install dependencies
         run: yarn --immutable
 
+      - name: Read package version
+        id: pkg
+        run: node -e "require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'version='+JSON.parse(require('fs').readFileSync('package.json','utf8')).version+'\n')"
+
       - name: Build (${{ matrix.arch }})
         env:
           YTMD_UPDATE_FEED_OWNER: ${{ vars.YTMD_UPDATE_FEED_OWNER }}
           YTMD_UPDATE_FEED_REPOSITORY: ${{ vars.YTMD_UPDATE_FEED_REPOSITORY }}
+          YTMD_RENAME_OS: ${{ matrix.os.name }}
+          YTMD_RENAME_ARCH: ${{ matrix.arch }}
         run: yarn make --arch ${{ matrix.arch }}
 
       - name: Upload artifacts (Linux)
         if: matrix.os.name == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: ytmdesktop-linux-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_linux-${{ matrix.arch }}
           path: out/make/**
 
       - name: Upload artifacts (Windows)
         if: matrix.os.name == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ytmdesktop-windows-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_windows-${{ matrix.arch }}
           path: out/make/**
 
       - name: Upload artifacts (macOS)
         if: matrix.os.name == 'macos'
         uses: actions/upload-artifact@v4
         with:
-          name: ytmdesktop-macos-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_macos-${{ matrix.arch }}
           path: out/make/**
 
   release:

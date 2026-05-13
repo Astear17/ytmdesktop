@@ -1,13 +1,36 @@
 <script setup lang="ts">
-import { onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import logo from "~assets/icons/ytmd.png";
 
+const { t } = useI18n();
+
 const memoryStore = window.ytmd.memoryStore;
+
+const YTM_LOAD_FAIL_PREFIX = "Failed to load YouTube Music:";
+const LOADING_STATUS_I18N: Record<string, string> = {
+  "Checking for updates...": "loading_status_checking_updates",
+  "Downloading update...": "loading_status_downloading_update",
+  "Initializing...": "loading_status_initializing",
+  "Loading YouTube Music...": "loading_status_loading",
+  "Loaded YouTube Music": "loading_status_loaded",
+  "Initialized": "loading_status_initialized"
+};
 
 const ytmViewLoading = ref<boolean>(await memoryStore.get("ytmViewLoading"));
 const ytmViewLoadingError = ref<boolean>(await memoryStore.get("ytmViewLoadingError"));
 const ytmViewLoadTimedout = ref<boolean>(await memoryStore.get("ytmViewLoadTimedout"));
 const ytmViewLoadingStatus = ref<string>((await memoryStore.get("ytmViewLoadingStatus")) ?? "");
+
+const translatedLoadingStatus = computed(() => {
+  const s = ytmViewLoadingStatus.value;
+  if (!s) return "";
+  if (s.startsWith(YTM_LOAD_FAIL_PREFIX)) {
+    return t("loading_status_failed_prefix") + s.slice(YTM_LOAD_FAIL_PREFIX.length);
+  }
+  const key = LOADING_STATUS_I18N[s];
+  return key ? t(key) : s;
+});
 
 onBeforeMount(async () => {
   ytmViewLoading.value = await memoryStore.get("ytmViewLoading");
@@ -39,8 +62,8 @@ memoryStore.onStateChanged(newState => {
           <div class="loader-line"></div>
           <div class="loader-line"></div>
         </div>
-        <p :class="{ 'ytmview-loading-status': true, 'error': ytmViewLoadingError }">{{ ytmViewLoadingStatus }}</p>
-        <p v-if="ytmViewLoadTimedout" class="ytmview-loading-timeout">YouTube Music is taking longer than usual to load</p>
+        <p :class="{ 'ytmview-loading-status': true, 'error': ytmViewLoadingError }">{{ translatedLoadingStatus }}</p>
+        <p v-if="ytmViewLoadTimedout" class="ytmview-loading-timeout">{{ t("loading_timeout_hint") }}</p>
       </div>
       <div v-else class="ytmview-loading"></div>
     </Transition>
@@ -60,6 +83,7 @@ memoryStore.onStateChanged(newState => {
   align-items: center;
   height: calc(100% - 36px);
   user-select: none;
+  padding-top: 64px;
 }
 
 .ytmview-loading-status {

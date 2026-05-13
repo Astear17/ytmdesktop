@@ -4,7 +4,7 @@ import MemoryStore from "../../memory-store";
 import { MemoryStoreSchema } from "~shared/store/schema";
 import DiscordClient from "./minimal-discord-client";
 import log from "electron-log";
-import { DiscordActivityType } from "./minimal-discord-client/types";
+import { DiscordActivityType, DiscordActivityStatusDisplayType, type DiscordActivity } from "./minimal-discord-client/types";
 
 const DISCORD_CLIENT_ID = "1143202598460076053";
 
@@ -94,9 +94,9 @@ export default class DiscordPresence implements IIntegration {
         timestamps.end = Date.now() + (durationSeconds - this.progress) * 1000;
       }
 
-      const activity: any = {
+      const activity: DiscordActivity = {
         type: DiscordActivityType.Listening,
-        status_display_type: 1,
+        status_display_type: DiscordActivityStatusDisplayType.State,
         details: stringLimit(title, 128, 2),
         state: stringLimit(author, 128, 2),
         assets: {
@@ -127,6 +127,10 @@ export default class DiscordPresence implements IIntegration {
           {
             label: "Play on YTMDesktop",
             url: `ytmd://play/${id}`
+          },
+          {
+            label: "Listen on YouTube",
+            url: `https://music.youtube.com/watch?v=${id}`
           }
         ];
       }
@@ -145,7 +149,7 @@ export default class DiscordPresence implements IIntegration {
     // store hasFullMetadata so UpdateActivity can choose what to include
     this.hasFullMetadata = !!hasFullMetadata;
 
-    log.debug('discord-presence: playerStateChanged', {
+    log.debug("discord-presence: playerStateChanged", {
       hasFullMetadata: this.hasFullMetadata,
       trackState,
       videoId: videoDetails?.id,
@@ -171,7 +175,7 @@ export default class DiscordPresence implements IIntegration {
     const changedForFallback = !hasFullMetadata && oldId !== this.videoDetails.id;
 
     if (changedEnoughForFull || changedForFallback) {
-      log.debug('discord-presence: UpdateActivity triggered', {
+      log.debug("discord-presence: UpdateActivity triggered", {
         oldState,
         oldId,
         oldProgress,
@@ -182,7 +186,7 @@ export default class DiscordPresence implements IIntegration {
       });
       this.UpdateActivity();
     } else {
-      log.debug('discord-presence: UpdateActivity skipped', {
+      log.debug("discord-presence: UpdateActivity skipped", {
         hasFullMetadata: this.hasFullMetadata,
         oldState,
         oldId,
