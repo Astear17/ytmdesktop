@@ -21,19 +21,25 @@ A cross-platform desktop application for YouTube Music, providing a native exper
 
 ## Download
 
-Official fork builds use the **[Manual Build & Release](https://github.com/Astear17/ytmdesktop/actions/workflows/manual-build.yml)** workflow. Example successful run: **[#25806701001](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001)** (commit `09bda90`, **3.0.0-hotfix**). Open the run, scroll to **Artifacts**, and download the ZIP whose name matches your OS and CPU below (each ZIP contains the installer(s) produced for that matrix job, e.g. `.exe` on Windows, `.deb`/`.rpm` on Linux, `.zip` on macOS).
+All available download mirrors for your OS is included below (currently on v3.0.0-hotfix as latest on v3.0.0 tag) 
 
 | OS | Architecture | GitHub Actions | GitHub Releases |
 | --- | --- | --- | --- |
-| Windows | x86_64 (amd64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_windows-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
-| Windows | ARM64 (aarch64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_windows-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
-| macOS | x86_64 (Intel) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_macos-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
-| macOS | ARM64 (Apple Silicon) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_macos-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
-| Linux | x86_64 (amd64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_linux-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
-| Linux | ARM64 (aarch64) | [Artifacts — pick `YTMDesktop-Astear17_3.0.0-hotfix_linux-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001#artifacts) | [Astear17/ytmdesktop Releases](https://github.com/Astear17/ytmdesktop/releases) |
+| Windows | x86_64 (amd64) | [`YTMDesktop-Astear17_3.0.0_windows-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973432685) | [`YTMDesktop-Astear17_3.0.0_win-x64.exe`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_win-x64.exe) |
+| Windows | ARM64 (aarch64) | [`YTMDesktop-Astear17_3.0.0_windows-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973441975) | [`YTMDesktop-Astear17_3.0.0_win-arm64.exe`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_win-arm64.exe) |
+| macOS | x86_64 (Intel) | [`YTMDesktop-Astear17_3.0.0_macos-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973366169) | [`YTMDesktop-Astear17_3.0.0_darwin-x64.zip`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_darwin-x64.zip) |
+| macOS | ARM64 | [`YTMDesktop-Astear17_3.0.0_macos-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973374640) | [`YTMDesktop-Astear17_3.0.0_darwin-arm64.zip`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_darwin-arm64.zip) |
+| Linux | x86_64 (amd64) | [`YTMDesktop-Astear17_3.0.0_linux-x64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973388100) | [`YTMDesktop-Astear17_3.0.0_linux-amd64.deb`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_linux-amd64.deb)<br>[`YTMDesktop-Astear17_3.0.0_linux-x86_64.rpm`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_linux-x86_64.rpm) |
+| Linux | ARM64 (aarch64) | [`YTMDesktop-Astear17_3.0.0_linux-arm64`](https://github.com/Astear17/ytmdesktop/actions/runs/25806701001/artifacts/6973397452) | [`YTMDesktop-Astear17_3.0.0_linux-arm64.deb`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_linux-arm64.deb)<br>[`YTMDesktop-Astear17_3.0.0_linux-arm64.rpm`](https://github.com/Astear17/ytmdesktop/releases/download/v3.0.0/YTMDesktop-Astear17_3.0.0_linux-arm64.rpm) |
+<br>
 
-**SHA-256 (from CI, run 25806701001)**  
-`windows-x64` — `c05b0940da58ac0914ce27cf0d3b81a1e36055d5337b925a2949d17b498006c6` · `windows-arm64` — `0498ae5f4dd01dc66f1ddf4fc995f407b69c6118ed9a9443cde9274171a717e9` · `macos-x64` — `16c1e9e62753fd78057a5692c2b1d18d1047e2cb85170ba69a07bb396382b122` · `macos-arm64` — `58ed808f61658b296085fb80c5c2f5f38b10613ab581bf2b548df6e555e8caa6` · `linux-x64` — `bf4720ee5336eeb3b876fa8927398fd4b79270e58a86dd15e8ff92cd17a2bf4f` · `linux-arm64` — `4065218151beda7234ebf368186af6eb9e4782cb4f520145055647ad08134397`
+**SHA-256 - Verify before you download**  
+`windows-x64` — `c05b0940da58ac0914ce27cf0d3b81a1e36055d5337b925a2949d17b498006c6`<br>
+`windows-arm64` — `0498ae5f4dd01dc66f1ddf4fc995f407b69c6118ed9a9443cde9274171a717e9` <br>
+`macos-x64` — `16c1e9e62753fd78057a5692c2b1d18d1047e2cb85170ba69a07bb396382b122` <br>
+`macos-arm64` — `58ed808f61658b296085fb80c5c2f5f38b10613ab581bf2b548df6e555e8caa6` <br>
+`linux-x64` — `bf4720ee5336eeb3b876fa8927398fd4b79270e58a86dd15e8ff92cd17a2bf4f` <br>
+`linux-arm64` — `4065218151beda7234ebf368186af6eb9e4782cb4f520145055647ad08134397`<br>
 
 For the next manual build, open the **[Actions](https://github.com/Astear17/ytmdesktop/actions)** tab and use the newest **Manual Build & Release** run; artifact names will include the current `package.json` version.
 
