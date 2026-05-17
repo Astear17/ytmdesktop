@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name for the release (e.g. v2.0.26-manual)'
+        description: 'Tag name for the release'
         required: true
         default: 'manual-build'
 
@@ -61,21 +61,21 @@ jobs:
         if: matrix.os.name == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_linux-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}_linux-${{ matrix.arch }}
           path: out/make/**
 
       - name: Upload artifacts (Windows)
         if: matrix.os.name == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_windows-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}_windows-${{ matrix.arch }}
           path: out/make/**
 
       - name: Upload artifacts (macOS)
         if: matrix.os.name == 'macos'
         uses: actions/upload-artifact@v4
         with:
-          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}-hotfix_macos-${{ matrix.arch }}
+          name: YTMDesktop-Astear17_${{ steps.pkg.outputs.version }}_macos-${{ matrix.arch }}
           path: out/make/**
 
   release:
