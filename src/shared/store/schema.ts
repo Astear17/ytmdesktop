@@ -34,8 +34,8 @@ export type StoreSchema = {
     progressInTaskbar: boolean;
     ratioVolume: boolean;
     normalizationEnabled: boolean;
+    eqEnabled: boolean;
     eqGains: number[];
-    audioOutputDeviceId: string;
     crossfadeEnabled: boolean;
     crossfadeDuration: number;
   };
@@ -51,7 +51,6 @@ export type StoreSchema = {
     youtubeNonStopEnabled: boolean;
     sponsorBlockEnabled: boolean;
     lyricsTranslationEnabled: boolean;
-    karaokeEnabled: boolean;
   };
   shortcuts: {
     playPause: string;

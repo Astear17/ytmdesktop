@@ -85,8 +85,10 @@
     }
   });
 
-  // Audio Processing (Visualizer, EQ, Normalization)
+  // Audio Processing (EQ, Normalization)
   (function initAudio() {
+    if (window.__YTMD_AUDIO__) return;
+
     const video = document.querySelector('video');
     if (!video) {
       setTimeout(initAudio, 1000);
@@ -94,7 +96,13 @@
     }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaElementSource(video);
+    let source;
+    try {
+      source = audioCtx.createMediaElementSource(video);
+    } catch (err) {
+      console.warn("YTMD audio processing unavailable", err);
+      return;
+    }
     
     // Equalizer
     const filters = [];
@@ -112,7 +120,7 @@
       lastNode = filter;
     });
 
-    // Normalizer (Compressor)
+    // Normalizer (Compressor). Keep a dry path so enabling normalization never forces volume to max.
     const compressor = audioCtx.createDynamicsCompressor();
     compressor.threshold.value = -24;
     compressor.knee.value = 30;
@@ -120,12 +128,21 @@
     compressor.attack.value = 0.003;
     compressor.release.value = 0.25;
     
-    const normalizationGain = audioCtx.createGain();
-    normalizationGain.gain.value = 1;
+    const dryGain = audioCtx.createGain();
+    dryGain.gain.value = 1;
 
+    const normalizationGain = audioCtx.createGain();
+    normalizationGain.gain.value = 0;
+
+    const fadeGain = audioCtx.createGain();
+    fadeGain.gain.value = 1;
+
+    lastNode.connect(dryGain);
     lastNode.connect(compressor);
     compressor.connect(normalizationGain);
-    lastNode = normalizationGain;
+    dryGain.connect(fadeGain);
+    normalizationGain.connect(fadeGain);
+    lastNode = fadeGain;
 
     // Analyser
     const analyser = audioCtx.createAnalyser();
@@ -135,100 +152,148 @@
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const translationCache = new Map();
+    let lyricsTranslationEnabled = false;
+    let lyricsTranslationLanguage = "en";
+    let lyricsTranslationTimeout = null;
+
+    function getTranslationTargetLanguage(language) {
+      if (!language || language === "auto") {
+        return (navigator.language || "en").split("-")[0] || "en";
+      }
+      return language.split("-")[0] || "en";
+    }
+
+    function getLyricsTextElements() {
+      const lyricsContainer = document.querySelector('ytmusic-player-page #lyrics') || document.querySelector('[page-type="MUSIC_PAGE_TYPE_TRACK_LYRICS"]');
+      if (!lyricsContainer) return [];
+
+      return Array.from(lyricsContainer.querySelectorAll("yt-formatted-string, span, p, div")).filter(element => {
+        const text = element.innerText?.trim();
+        if (!text || text.length < 2) return false;
+        if (element.children.length > 0 && Array.from(element.children).some(child => child.innerText?.trim())) return false;
+        return true;
+      });
+    }
+
+    async function translateText(text, targetLanguage) {
+      const cacheKey = `${targetLanguage}:${text}`;
+      if (translationCache.has(cacheKey)) return translationCache.get(cacheKey);
+
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Translate request failed: ${response.status}`);
+      const data = await response.json();
+      const translated = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || "").join("") : "";
+      const result = translated.trim() || text;
+      translationCache.set(cacheKey, result);
+      return result;
+    }
+
+    function restoreLyrics() {
+      for (const element of getLyricsTextElements()) {
+        if (element.dataset.ytmdOriginalText) {
+          element.innerText = element.dataset.ytmdOriginalText;
+          delete element.dataset.ytmdOriginalText;
+          delete element.dataset.ytmdTranslatedLanguage;
+        }
+      }
+    }
+
+    function scheduleLyricsTranslation() {
+      if (lyricsTranslationTimeout) clearTimeout(lyricsTranslationTimeout);
+      lyricsTranslationTimeout = setTimeout(() => {
+        void translateLyrics();
+      }, 400);
+    }
+
+    async function translateLyrics() {
+      if (!lyricsTranslationEnabled) {
+        restoreLyrics();
+        return;
+      }
+
+      const targetLanguage = lyricsTranslationLanguage;
+      if (!targetLanguage) return;
+
+      for (const element of getLyricsTextElements()) {
+        const originalText = element.dataset.ytmdOriginalText || element.innerText?.trim();
+        if (!originalText || element.dataset.ytmdTranslatedLanguage === targetLanguage) continue;
+
+        element.dataset.ytmdOriginalText = originalText;
+        try {
+          const translated = await translateText(originalText, targetLanguage);
+          if (lyricsTranslationEnabled && translated) {
+            element.innerText = translated;
+            element.dataset.ytmdTranslatedLanguage = targetLanguage;
+          }
+        } catch (err) {
+          console.warn("YTMD lyrics translation failed", err);
+          break;
+        }
+      }
+    }
 
     window.__YTMD_AUDIO__ = {
       updateSettings: (settings) => {
         if (settings.eq) {
           settings.eq.forEach((gain, index) => {
-            if (filters[index]) filters[index].gain.value = gain;
+            if (filters[index]) filters[index].gain.value = settings.eqEnabled ? gain : 0;
           });
         }
         if (settings.normalization !== undefined) {
-          normalizationGain.gain.value = settings.normalization ? 1.5 : 1; // Simple boost for now
+          dryGain.gain.value = settings.normalization ? 0 : 1;
+          normalizationGain.gain.value = settings.normalization ? 1 : 0;
         }
-        if (settings.outputDeviceId && video.setSinkId) {
-          video.setSinkId(settings.outputDeviceId);
-        }
-        
         // Crossfade
-        if (this.crossfadeInterval) clearInterval(this.crossfadeInterval);
+        if (window.__YTMD_AUDIO__.crossfadeInterval) clearInterval(window.__YTMD_AUDIO__.crossfadeInterval);
+        fadeGain.gain.value = 1;
         if (settings.crossfade) {
-          this.crossfadeInterval = setInterval(() => {
+          window.__YTMD_AUDIO__.crossfadeInterval = setInterval(() => {
             if (video.paused) return;
             const duration = video.duration;
             const currentTime = video.currentTime;
+            if (!Number.isFinite(duration) || !Number.isFinite(currentTime)) return;
             const timeLeft = duration - currentTime;
             const fadeTime = settings.crossfadeDuration || 5;
 
             if (timeLeft < fadeTime) {
-              video.volume = Math.max(0, timeLeft / fadeTime);
+              fadeGain.gain.value = Math.max(0, timeLeft / fadeTime);
             } else if (currentTime < fadeTime) {
-              video.volume = Math.min(1, currentTime / fadeTime);
+              fadeGain.gain.value = Math.min(1, currentTime / fadeTime);
             } else {
-              video.volume = 1;
+              fadeGain.gain.value = 1;
             }
           }, 200);
+        } else {
+          window.__YTMD_AUDIO__.crossfadeInterval = null;
+        }
+
+        if (settings.lyricsTranslation !== undefined) {
+          lyricsTranslationEnabled = !!settings.lyricsTranslation;
+          lyricsTranslationLanguage = getTranslationTargetLanguage(settings.language);
+          scheduleLyricsTranslation();
         }
       },
       crossfadeInterval: null
     };
 
+    let lastAudioDataSent = 0;
     function sendFrequencyData() {
       analyser.getByteFrequencyData(dataArray);
-      window.ytmd.sendAudioData(Array.from(dataArray));
-      
-      drawVisualizer(dataArray);
-      requestAnimationFrame(sendFrequencyData);
-    }
-
-    const visualizerCanvas = document.createElement('canvas');
-    visualizerCanvas.id = 'ytmd-visualizer';
-    visualizerCanvas.style.position = 'absolute';
-    visualizerCanvas.style.bottom = '0';
-    visualizerCanvas.style.left = '0';
-    visualizerCanvas.style.width = '100%';
-    visualizerCanvas.style.height = '100%';
-    visualizerCanvas.style.pointerEvents = 'none';
-    visualizerCanvas.style.zIndex = '0';
-    visualizerCanvas.style.opacity = '0.4';
-
-    const playerBar = document.querySelector('ytmusic-player-bar');
-    if (playerBar) {
-      playerBar.style.position = 'relative';
-      playerBar.insertBefore(visualizerCanvas, playerBar.firstChild);
-    }
-
-    function drawVisualizer(data) {
-      const ctx = visualizerCanvas.getContext('2d');
-      const width = visualizerCanvas.width = visualizerCanvas.offsetWidth;
-      const height = visualizerCanvas.height = visualizerCanvas.offsetHeight;
-      
-      ctx.clearRect(0, 0, width, height);
-      
-      const barWidth = (width / data.length) * 2.5;
-      let x = 0;
-
-      for (let i = 0; i < data.length; i++) {
-        const barHeight = (data[i] / 255) * height;
-        
-        // Use system accent color if available
-        const accentColor = getComputedStyle(document.body).getPropertyValue('--system-accent-color') || '#ff0000';
-        ctx.fillStyle = accentColor;
-        
-        ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
-        x += barWidth;
+      const now = performance.now();
+      if (now - lastAudioDataSent > 250) {
+        lastAudioDataSent = now;
+        window.ytmd.sendAudioData(Array.from(dataArray));
       }
+      requestAnimationFrame(sendFrequencyData);
     }
 
     sendFrequencyData();
 
     // Lyrics Observer
     const lyricsObserver = new MutationObserver(() => {
-      const lyricsContainer = document.querySelector('ytmusic-player-page #lyrics');
-      if (lyricsContainer) {
-        // Here we would handle translation and karaoke
-        // For now, we just log to verify it's working
-      }
+      scheduleLyricsTranslation();
     });
 
     const checkLyrics = () => {
@@ -255,7 +320,6 @@
         video.muted = true;
       } else if (video && video.playbackRate === 16) {
         video.playbackRate = 1;
-        video.muted = false;
       }
     }, 500);
   })();

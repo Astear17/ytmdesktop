@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 const props = defineProps({
   modelValue: {
@@ -18,12 +18,13 @@ const currentKeybind = computed({
   },
   set(value) {
     emit("update:modelValue", value);
-    emit("change");
+    queueMicrotask(() => emit("change"));
   }
 });
 
 function startEditing() {
-  keybindInput.value.focus();
+  isEditing.value = true;
+  keybindInput.value?.focus();
 }
 
 function keybindInputFocused() {
@@ -31,7 +32,9 @@ function keybindInputFocused() {
 }
 
 function keybindInputBlurred() {
-  isEditing.value = false;
+  if (document.activeElement !== keybindInput.value) {
+    isEditing.value = false;
+  }
 }
 
 function isDisallowedKey(key: string) {
@@ -43,37 +46,37 @@ function isDisallowedKey(key: string) {
     key === "Shift" ||
     key === "AltGraph" ||
     key === "Pause" ||
-    key === "MediaPlayPause" ||
-    key === "MediaTrackPrevious" ||
-    key === "MediaTrackNext" ||
-    key === "MediaStop" ||
     key === "Tab" ||
-    key === "AudioVolumeUp" ||
-    key === "AudioVolumeDown" ||
-    key === "AudioVolumeMute" ||
     key === "ContextMenu" ||
     key === "Cancel"
   );
 }
 
 function validateKey(event: KeyboardEvent) {
+  if (event.key === "MediaPlayPause") return "MediaPlayPause";
+  if (event.key === "MediaTrackNext") return "MediaNextTrack";
+  if (event.key === "MediaTrackPrevious") return "MediaPreviousTrack";
+  if (event.key === "MediaStop") return "MediaStop";
+  if (event.key === "AudioVolumeUp") return "VolumeUp";
+  if (event.key === "AudioVolumeDown") return "VolumeDown";
+  if (event.key === "AudioVolumeMute") return "VolumeMute";
   if (event.key === " ") return "Space";
   if (event.code === "NumpadEnter") return "Enter";
-  if (event.code === "NumpadAdd") return "NumAdd";
-  if (event.code === "NumpadSubtract") return "NumSub";
-  if (event.code === "NumpadDecimal") return "NumDec";
-  if (event.code === "NumpadMultiply") return "NumMult";
-  if (event.code === "NumpadDivide") return "NumDiv";
-  if (event.code === "Numpad0") return "Num0";
-  if (event.code === "Numpad1") return "Num1";
-  if (event.code === "Numpad2") return "Num2";
-  if (event.code === "Numpad3") return "Num3";
-  if (event.code === "Numpad4") return "Num4";
-  if (event.code === "Numpad5") return "Num5";
-  if (event.code === "Numpad6") return "Num6";
-  if (event.code === "Numpad7") return "Num7";
-  if (event.code === "Numpad8") return "Num8";
-  if (event.code === "Numpad9") return "Num9";
+  if (event.code === "NumpadAdd") return "numadd";
+  if (event.code === "NumpadSubtract") return "numsub";
+  if (event.code === "NumpadDecimal") return "numdec";
+  if (event.code === "NumpadMultiply") return "nummult";
+  if (event.code === "NumpadDivide") return "numdiv";
+  if (event.code === "Numpad0") return "num0";
+  if (event.code === "Numpad1") return "num1";
+  if (event.code === "Numpad2") return "num2";
+  if (event.code === "Numpad3") return "num3";
+  if (event.code === "Numpad4") return "num4";
+  if (event.code === "Numpad5") return "num5";
+  if (event.code === "Numpad6") return "num6";
+  if (event.code === "Numpad7") return "num7";
+  if (event.code === "Numpad8") return "num8";
+  if (event.code === "Numpad9") return "num9";
   if (event.code === "ArrowUp") return "Up";
   if (event.code === "ArrowDown") return "Down";
   if (event.code === "ArrowLeft") return "Left";
@@ -85,18 +88,22 @@ function validateKey(event: KeyboardEvent) {
 }
 
 function keybindInputKeyDown(event: KeyboardEvent) {
+  if (!isEditing.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (event.key === "Escape" || event.key === "Backspace" || event.key === "Delete") {
+    currentKeybind.value = "";
+    isEditing.value = false;
+    keybindInput.value?.blur();
+    return;
+  }
+
   if (isDisallowedKey(event.key)) {
     return;
   }
 
   let newKeybind = "";
-
-  if (event.key === "Escape") {
-    currentKeybind.value = "";
-    keybindInput.value.blur();
-    event.preventDefault();
-    return;
-  }
 
   if (event.metaKey) newKeybind += "Meta+";
   if (event.ctrlKey) newKeybind += "CmdOrCtrl+";
@@ -104,20 +111,38 @@ function keybindInputKeyDown(event: KeyboardEvent) {
   if (event.shiftKey) newKeybind += "Shift+";
 
   newKeybind += validateKey(event);
-  keybindInput.value.blur();
-
   currentKeybind.value = newKeybind;
-
-  event.preventDefault();
+  isEditing.value = false;
+  keybindInput.value?.blur();
 }
+
+function documentKeyDown(event: KeyboardEvent) {
+  keybindInputKeyDown(event);
+}
+
+onMounted(() => {
+  document.addEventListener("keydown", documentKeyDown, true);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("keydown", documentKeyDown, true);
+});
 </script>
 
 <template>
-  <div :class="{ 'keybind': true, 'is-editing': isEditing }">
+  <div :class="{ 'keybind': true, 'is-editing': isEditing }" @click="startEditing">
     <p v-if="!currentKeybind" class="keybind-text" @click="startEditing">None</p>
     <p v-else class="keybind-text" @click="startEditing">{{ currentKeybind }}</p>
-    <input ref="keybindInput" class="keybind-input" type="text" @focus="keybindInputFocused" @blur="keybindInputBlurred" @keydown="keybindInputKeyDown" />
-    <button class="remove" :disabled="!currentKeybind" @click="currentKeybind = ''"><span class="material-symbols-outlined">delete</span></button>
+    <input
+      ref="keybindInput"
+      class="keybind-input"
+      type="text"
+      readonly
+      @focus="keybindInputFocused"
+      @blur="keybindInputBlurred"
+      @keydown="keybindInputKeyDown"
+    />
+    <button class="remove" :disabled="!currentKeybind" @click.stop="currentKeybind = ''"><span class="material-symbols-outlined">delete</span></button>
   </div>
 </template>
 
@@ -127,6 +152,7 @@ function keybindInputKeyDown(event: KeyboardEvent) {
   user-select: none;
   cursor: pointer;
   display: flex;
+  min-width: 0;
 }
 
 .keybind.is-editing {
@@ -141,12 +167,18 @@ function keybindInputKeyDown(event: KeyboardEvent) {
   width: 216px;
   height: 20px;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .keybind-input {
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
   position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
   background: none;
   border: none;
   outline: none;

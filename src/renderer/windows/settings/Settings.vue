@@ -51,9 +51,8 @@ const enableSpeakerFill = ref(false);
 const progressInTaskbar = ref(false);
 const ratioVolume = ref(false);
 const normalizationEnabled = ref(false);
+const eqEnabled = ref(false);
 const eqGains = ref([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-const audioOutputDeviceId = ref("default");
-const audioDevices = ref<{ [key: string]: string }>({});
 
 const languageSelectMap = computed(() => ({
   auto: t("lang_auto"),
@@ -65,11 +64,6 @@ const trayIconStyleSelectMap = computed(() => ({
   [TrayIconStyle.Auto]: t("tray_auto"),
   [TrayIconStyle.White]: t("tray_white"),
   [TrayIconStyle.Black]: t("tray_black")
-}));
-
-const audioOutputDeviceMap = computed(() => ({
-  default: t("default_audio_device"),
-  ...audioDevices.value
 }));
 
 function normalizeAdblockerEngine(value: unknown): AdblockerEngine {
@@ -97,7 +91,6 @@ const adblockerEngine = ref<AdblockerEngine>("ghostery_ads_privacy");
 const youtubeNonStopEnabled = ref(true);
 const sponsorBlockEnabled = ref(true);
 const lyricsTranslationEnabled = ref(false);
-const karaokeEnabled = ref(false);
 
 const enableDevTools = ref(false);
 const autoRebuildWindowsExe = ref(false);
@@ -153,8 +146,7 @@ onBeforeMount(async () => {
       vuFailed,
       vdFailed,
       authWindowEnabled,
-      updaterDisabled,
-      devices
+      updaterDisabled
     ] = await Promise.all([
       window.ytmd.getAppVersion(),
       window.ytmd.isAppUpdateAvailable(),
@@ -176,8 +168,7 @@ onBeforeMount(async () => {
       memoryStore.get("shortcutsVolumeUpRegisterFailed"),
       memoryStore.get("shortcutsVolumeDownRegisterFailed"),
       memoryStore.get("companionServerAuthWindowEnabled"),
-      memoryStore.get("autoUpdaterDisabled"),
-      navigator.mediaDevices.enumerateDevices()
+      memoryStore.get("autoUpdaterDisabled")
     ]);
 
     ytmdVersion.value = version;
@@ -206,8 +197,8 @@ onBeforeMount(async () => {
     progressInTaskbar.value = !!playbackStore?.progressInTaskbar;
     ratioVolume.value = !!playbackStore?.ratioVolume;
     normalizationEnabled.value = !!playbackStore?.normalizationEnabled;
+    eqEnabled.value = !!playbackStore?.eqEnabled;
     eqGains.value = playbackStore?.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    audioOutputDeviceId.value = playbackStore?.audioOutputDeviceId || "default";
     crossfadeEnabled.value = !!playbackStore?.crossfadeEnabled;
     crossfadeDuration.value = playbackStore?.crossfadeDuration || 5;
 
@@ -220,7 +211,6 @@ onBeforeMount(async () => {
     youtubeNonStopEnabled.value = integrationsStore?.youtubeNonStopEnabled !== false;
     sponsorBlockEnabled.value = integrationsStore?.sponsorBlockEnabled !== false;
     lyricsTranslationEnabled.value = !!integrationsStore?.lyricsTranslationEnabled;
-    karaokeEnabled.value = !!integrationsStore?.karaokeEnabled;
 
     enableDevTools.value = !!developerStore?.enableDevTools;
     autoRebuildWindowsExe.value = !!developerStore?.autoRebuildWindowsExe;
@@ -257,13 +247,6 @@ onBeforeMount(async () => {
     lastFMSessionKey.value = lastfmStore?.sessionKey || "";
     scrobblePercent.value = lastfmStore?.scrobblePercent || 50;
 
-    audioDevices.value = {};
-    devices
-      .filter(d => d.kind === "audiooutput")
-      .forEach(d => {
-        audioDevices.value[d.deviceId] = d.label || d.deviceId;
-      });
-
     if (language.value === "auto") {
       locale.value = navigator.language.startsWith("vi") ? "vi" : "en";
     } else {
@@ -290,8 +273,8 @@ onBeforeMount(async () => {
       progressInTaskbar.value = !!newState.playback.progressInTaskbar;
       ratioVolume.value = !!newState.playback.ratioVolume;
       normalizationEnabled.value = !!newState.playback.normalizationEnabled;
+      eqEnabled.value = !!newState.playback.eqEnabled;
       eqGains.value = newState.playback.eqGains || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      audioOutputDeviceId.value = newState.playback.audioOutputDeviceId || "default";
       crossfadeEnabled.value = !!newState.playback.crossfadeEnabled;
       crossfadeDuration.value = newState.playback.crossfadeDuration || 5;
 
@@ -304,7 +287,6 @@ onBeforeMount(async () => {
       youtubeNonStopEnabled.value = newState.integrations.youtubeNonStopEnabled !== false;
       sponsorBlockEnabled.value = newState.integrations.sponsorBlockEnabled !== false;
       lyricsTranslationEnabled.value = !!newState.integrations.lyricsTranslationEnabled;
-      karaokeEnabled.value = !!newState.integrations.karaokeEnabled;
 
       if (safeStorageAvailable.value && newState.integrations.companionServerAuthTokens) {
         try {
@@ -387,8 +369,8 @@ async function settingsChanged() {
   store.set("playback.enableSpeakerFill", enableSpeakerFill.value);
   store.set("playback.ratioVolume", ratioVolume.value);
   store.set("playback.normalizationEnabled", normalizationEnabled.value);
+  store.set("playback.eqEnabled", eqEnabled.value);
   store.set("playback.eqGains", JSON.parse(JSON.stringify(eqGains.value)));
-  store.set("playback.audioOutputDeviceId", audioOutputDeviceId.value);
   store.set("playback.crossfadeEnabled", crossfadeEnabled.value);
   store.set("playback.crossfadeDuration", crossfadeDuration.value);
 
@@ -401,7 +383,6 @@ async function settingsChanged() {
   store.set("integrations.youtubeNonStopEnabled", youtubeNonStopEnabled.value);
   store.set("integrations.sponsorBlockEnabled", sponsorBlockEnabled.value);
   store.set("integrations.lyricsTranslationEnabled", lyricsTranslationEnabled.value);
-  store.set("integrations.karaokeEnabled", karaokeEnabled.value);
   store.set("lastfm.scrobblePercent", scrobblePercent.value);
 
   store.set("shortcuts.playPause", shortcutPlayPause.value);
@@ -453,6 +434,11 @@ async function deleteCompanionAuthToken(appId: string) {
 
 function removeCustomCSSPath() {
   store.set("appearance.customCSSPath", null);
+}
+
+async function resetEqualizer() {
+  eqGains.value = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  await settingsChanged();
 }
 
 function changeTab(newTab: number) {
@@ -594,13 +580,6 @@ async function clearCache() {
           <YTMDSetting v-model="progressInTaskbar" type="checkbox" :name="$t('show_track_progress')" @change="settingsChanged" />
           <YTMDSetting v-model="enableSpeakerFill" type="checkbox" restart-required :name="$t('enable_speaker_fill')" @change="settingChangedRequiresRestart" />
           <YTMDSetting v-model="ratioVolume" type="checkbox" :name="$t('ratio_volume')" @change="settingsChanged" />
-          <YTMDSetting
-            v-model="audioOutputDeviceId"
-            :options-map="audioOutputDeviceMap"
-            type="select"
-            :name="$t('audio_output_device')"
-            @change="settingsChanged"
-          />
           <YTMDSetting v-model="crossfadeEnabled" type="checkbox" :name="$t('crossfade_title')" :description="$t('crossfade_desc')" @change="settingsChanged" />
           <YTMDSetting
             v-if="crossfadeEnabled"
@@ -621,8 +600,12 @@ async function clearCache() {
             @change="settingsChanged"
           />
 
-          <div class="setting flex-column">
-            <p class="name">{{ $t("builtin_eq") }}</p>
+          <YTMDSetting v-model="eqEnabled" type="checkbox" :name="$t('builtin_eq')" @change="settingsChanged" />
+          <div v-if="eqEnabled" class="setting flex-column indented">
+            <div class="eq-header">
+              <p class="name">{{ $t("builtin_eq") }}</p>
+              <button class="eq-reset" @click="resetEqualizer"><span class="material-symbols-outlined">restart_alt</span>{{ $t("reset_eq") }}</button>
+            </div>
             <div class="eq-container">
               <div v-for="(freq, index) in eqFrequencies" :key="freq" class="eq-band">
                 <input v-model.number="eqGains[index]" type="range" orient="vertical" min="-12" max="12" step="1" @input="settingsChanged" />
@@ -664,7 +647,6 @@ async function clearCache() {
             :description="$t('lyrics_translation_desc')"
             @change="settingsChanged"
           />
-          <YTMDSetting v-model="karaokeEnabled" type="checkbox" :name="$t('karaoke')" :description="$t('karaoke_desc')" @change="settingsChanged" />
           <YTMDSetting
             v-model="companionServerEnabled"
             type="checkbox"
@@ -875,7 +857,7 @@ async function clearCache() {
             <p class="commit">{{ $t("commit_label") }}: {{ ytmdCommitHash }}</p>
           </span>
           <div class="links">
-            <a href="https://github.com/ytmdesktop/ytmdesktop" target="_blank">{{ $t("about_github") }}</a>
+            <a href="https://github.com/Astear17/ytmdesktop" target="_blank">{{ $t("about_github") }}</a>
             <a href="https://ytmdesktop.github.io/" target="_blank">{{ $t("about_website") }}</a>
           </div>
         </div>
@@ -905,7 +887,7 @@ async function clearCache() {
   overflow: auto;
   flex: 1;
   min-height: 0;
-  padding: 4px 16px;
+  padding: 8px 20px;
 }
 
 .content::-webkit-scrollbar {
@@ -921,8 +903,8 @@ async function clearCache() {
 }
 
 .sidebar {
-  width: 25%;
-  min-width: 25%;
+  width: 232px;
+  min-width: 232px;
   list-style-type: none;
   margin: unset;
   padding: unset;
@@ -971,6 +953,9 @@ async function clearCache() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  min-width: 0;
 }
 
 .eq-container {
@@ -978,6 +963,22 @@ async function clearCache() {
   justify-content: space-between;
   width: 100%;
   padding: 10px 0;
+}
+
+.eq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.eq-header .name {
+  margin: 0;
+}
+
+.eq-reset {
+  gap: 4px;
 }
 
 .eq-band {
@@ -1219,6 +1220,7 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 0;
 }
 
 .shortcuts-tab .shortcut-title .register-error {

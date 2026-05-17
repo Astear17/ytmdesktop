@@ -340,6 +340,48 @@ function anyShortcutChanged(newState: Readonly<StoreSchema>, oldState: Readonly<
   return false;
 }
 
+function normalizeAccelerator(accelerator: string): string {
+  return accelerator
+    .split("+")
+    .map(part => {
+      switch (part) {
+        case "NumAdd":
+          return "numadd";
+        case "NumSub":
+          return "numsub";
+        case "NumDec":
+          return "numdec";
+        case "NumMult":
+          return "nummult";
+        case "NumDiv":
+          return "numdiv";
+        case "Num0":
+          return "num0";
+        case "Num1":
+          return "num1";
+        case "Num2":
+          return "num2";
+        case "Num3":
+          return "num3";
+        case "Num4":
+          return "num4";
+        case "Num5":
+          return "num5";
+        case "Num6":
+          return "num6";
+        case "Num7":
+          return "num7";
+        case "Num8":
+          return "num8";
+        case "Num9":
+          return "num9";
+        default:
+          return part;
+      }
+    })
+    .join("+");
+}
+
 let developerWatchMakeChild: ChildProcess | null = null;
 
 function stopDeveloperWatchMake(): void {
@@ -418,8 +460,8 @@ const store = new Conf<StoreSchema>({
       progressInTaskbar: false,
       ratioVolume: false,
       normalizationEnabled: false,
+      eqEnabled: false,
       eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      audioOutputDeviceId: "default",
       crossfadeEnabled: false,
       crossfadeDuration: 5
     },
@@ -433,8 +475,7 @@ const store = new Conf<StoreSchema>({
       adblockerEngine: "ghostery_ads_privacy",
       youtubeNonStopEnabled: true,
       sponsorBlockEnabled: true,
-      lyricsTranslationEnabled: false,
-      karaokeEnabled: false
+      lyricsTranslationEnabled: false
     },
     shortcuts: {
       playPause: "",
@@ -506,6 +547,11 @@ const store = new Conf<StoreSchema>({
     ">=2.0.28": store => {
       // Enable auto-rebuild by default for dev checkouts (no-op when packaged).
       store.set("developer.autoRebuildWindowsExe", true);
+    },
+    ">=3.0.1": store => {
+      if (!store.has("playback.eqEnabled")) {
+        store.set("playback.eqEnabled", false);
+      }
     }
   }
 });
@@ -668,11 +714,13 @@ store.onDidAnyChange(async (newState, oldState) => {
 
   if (ytmView && !ytmView.webContents.isDestroyed()) {
     ytmView.webContents.send("ytmView:updateAudioSettings", {
+      eqEnabled: newState.playback.eqEnabled,
       eq: newState.playback.eqGains,
       normalization: newState.playback.normalizationEnabled,
-      outputDeviceId: newState.playback.audioOutputDeviceId,
       crossfade: newState.playback.crossfadeEnabled,
-      crossfadeDuration: newState.playback.crossfadeDuration
+      crossfadeDuration: newState.playback.crossfadeDuration,
+      lyricsTranslation: newState.integrations.lyricsTranslationEnabled,
+      language: newState.general.language
     });
   }
 });
@@ -823,6 +871,40 @@ function setTrayIcon() {
   tray.setImage(getTrayIconPath());
 }
 
+function executeShortcutCommand(command: "playPause" | "next" | "previous" | "toggleLike" | "toggleDislike" | "volumeUp" | "volumeDown") {
+  if (ytmView) {
+    ytmView.webContents.send("remoteControl:execute", command);
+  }
+}
+
+function registerShortcut(
+  shortcutName: string,
+  accelerator: string,
+  command: "playPause" | "next" | "previous" | "toggleLike" | "toggleDislike" | "volumeUp" | "volumeDown",
+  failedMemoryKey: keyof MemoryStoreSchema
+) {
+  if (!accelerator) {
+    memoryStore.set(failedMemoryKey, false);
+    return;
+  }
+
+  const normalizedAccelerator = normalizeAccelerator(accelerator);
+  let registered = false;
+  try {
+    registered = globalShortcut.register(normalizedAccelerator, () => executeShortcutCommand(command));
+  } catch {
+    /* ignored */
+  }
+
+  if (!registered) {
+    log.info(`Failed to register shortcut: ${shortcutName} (${normalizedAccelerator})`);
+    memoryStore.set(failedMemoryKey, true);
+  } else {
+    log.info(`Registered shortcut: ${shortcutName} (${normalizedAccelerator})`);
+    memoryStore.set(failedMemoryKey, false);
+  }
+}
+
 // Shortcut registration
 function registerShortcuts() {
   const shortcuts = store.get("shortcuts");
@@ -830,166 +912,13 @@ function registerShortcuts() {
   globalShortcut.unregisterAll();
   log.info("Unregistered shortcuts");
 
-  if (shortcuts.playPause) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.playPause, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "playPause");
-        }
-      });
-    } catch {
-      /* ignored */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: playPause");
-      memoryStore.set("shortcutsPlayPauseRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: playPause");
-      memoryStore.set("shortcutsPlayPauseRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsPlayPauseRegisterFailed", false);
-  }
-
-  if (shortcuts.next) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.next, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "next");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: next");
-      memoryStore.set("shortcutsNextRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: next");
-      memoryStore.set("shortcutsNextRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsNextRegisterFailed", false);
-  }
-
-  if (shortcuts.previous) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.previous, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "previous");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: previous");
-      memoryStore.set("shortcutsPreviousRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: previous");
-      memoryStore.set("shortcutsPreviousRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsPreviousRegisterFailed", false);
-  }
-
-  if (shortcuts.thumbsUp) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.thumbsUp, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "toggleLike");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: thumbsUp");
-      memoryStore.set("shortcutsThumbsUpRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: thumbsUp");
-      memoryStore.set("shortcutsThumbsUpRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsThumbsUpRegisterFailed", false);
-  }
-
-  if (shortcuts.thumbsDown) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.thumbsDown, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "toggleDislike");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: thumbsDown");
-      memoryStore.set("shortcutsThumbsDownRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: thumbsDown");
-      memoryStore.set("shortcutsThumbsDownRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsThumbsDownRegisterFailed", false);
-  }
-
-  if (shortcuts.volumeUp) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.volumeUp, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "volumeUp");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: volumeUp");
-      memoryStore.set("shortcutsVolumeUpRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: volumeUp");
-      memoryStore.set("shortcutsVolumeUpRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsVolumeUpRegisterFailed", false);
-  }
-
-  if (shortcuts.volumeDown) {
-    let registered = false;
-    try {
-      registered = globalShortcut.register(shortcuts.volumeDown, () => {
-        if (ytmView) {
-          ytmView.webContents.send("remoteControl:execute", "volumeDown");
-        }
-      });
-    } catch {
-      /* empty */
-    }
-
-    if (!registered) {
-      log.info("Failed to register shortcut: volumeDown");
-      memoryStore.set("shortcutsVolumeDownRegisterFailed", true);
-    } else {
-      log.info("Registered shortcut: volumeDown");
-      memoryStore.set("shortcutsVolumeDownRegisterFailed", false);
-    }
-  } else {
-    memoryStore.set("shortcutsVolumeDownRegisterFailed", false);
-  }
+  registerShortcut("playPause", shortcuts.playPause, "playPause", "shortcutsPlayPauseRegisterFailed");
+  registerShortcut("next", shortcuts.next, "next", "shortcutsNextRegisterFailed");
+  registerShortcut("previous", shortcuts.previous, "previous", "shortcutsPreviousRegisterFailed");
+  registerShortcut("thumbsUp", shortcuts.thumbsUp, "toggleLike", "shortcutsThumbsUpRegisterFailed");
+  registerShortcut("thumbsDown", shortcuts.thumbsDown, "toggleDislike", "shortcutsThumbsDownRegisterFailed");
+  registerShortcut("volumeUp", shortcuts.volumeUp, "volumeUp", "shortcutsVolumeUpRegisterFailed");
+  registerShortcut("volumeDown", shortcuts.volumeDown, "volumeDown", "shortcutsVolumeDownRegisterFailed");
 
   log.info("Registered shortcuts");
 }
@@ -1089,7 +1018,7 @@ const createOrShowSettingsWindow = (): void => {
   });
 
   settingsWindow.webContents.setWindowOpenHandler(details => {
-    if (details.url === "https://github.com/ytmdesktop/ytmdesktop" || details.url === "https://ytmdesktop.github.io/") {
+    if (details.url === "https://github.com/Astear17/ytmdesktop" || details.url === "https://ytmdesktop.github.io/") {
       shell.openExternal(details.url);
     }
 
@@ -1871,7 +1800,7 @@ app.on("ready", async () => {
     if (event.sender !== settingsWindow.webContents) return;
 
     // autoUpdater downloads automatically and calling checkForUpdates causes duplicate install
-    if (!appUpdateAvailable || !appUpdateDownloaded) {
+    if (!appUpdateAvailable && !appUpdateDownloaded && !memoryStore.get("autoUpdaterDisabled")) {
       autoUpdater.checkForUpdates();
     }
   });
@@ -1910,18 +1839,20 @@ app.on("ready", async () => {
   log.info("Setup IPC handlers");
 
   // Create the permission handlers
-  session.fromPartition(app.isPackaged ? "persist:ytmview" : "persist:ytmview-dev").setPermissionCheckHandler((webContents, permission) => {
+  const ytmSession = session.fromPartition(app.isPackaged ? "persist:ytmview" : "persist:ytmview-dev");
+  const allowedYtmPermissions = new Set(["fullscreen", "media", "speaker-selection"]);
+  ytmSession.setPermissionCheckHandler((webContents, permission) => {
     if (webContents == ytmView.webContents) {
-      if (permission === "fullscreen") {
+      if (allowedYtmPermissions.has(permission)) {
         return true;
       }
     }
 
     return false;
   });
-  session.fromPartition(app.isPackaged ? "persist:ytmview" : "persist:ytmview-dev").setPermissionRequestHandler((webContents, permission, callback) => {
+  ytmSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (webContents == ytmView.webContents) {
-      if (permission === "fullscreen") {
+      if (allowedYtmPermissions.has(permission)) {
         return callback(true);
       }
     }

@@ -177,6 +177,29 @@ async function hookPlayerApiEvents() {
   (await webFrame.executeJavaScript(hookPlayerApiEventsScript))();
 }
 
+async function syncAudioSettings() {
+  const playback = await store.get("playback");
+  const integrations = await store.get("integrations");
+  const general = await store.get("general");
+  (
+    await webFrame.executeJavaScript(`
+      (function(settings) {
+        if (window.__YTMD_AUDIO__) {
+          window.__YTMD_AUDIO__.updateSettings(settings);
+        }
+      })
+    `)
+  )({
+    eqEnabled: playback.eqEnabled,
+    eq: playback.eqGains,
+    normalization: playback.normalizationEnabled,
+    crossfade: playback.crossfadeEnabled,
+    crossfadeDuration: playback.crossfadeDuration,
+    lyricsTranslation: integrations.lyricsTranslationEnabled,
+    language: general.language
+  });
+}
+
 function overrideHistoryButtonDisplay() {
   const el = document.querySelector<HTMLElement>("#history-link .history-button");
   if (!el) return;
@@ -315,6 +338,7 @@ window.addEventListener("load", async () => {
     await createAdditionalPlayerBarControls();
     await hideChromecastButton();
     await hookPlayerApiEvents();
+    await syncAudioSettings();
     overrideHistoryButtonDisplay();
 
     const integrationScripts: { [integrationName: string]: { [scriptName: string]: string } } = await ipcRenderer.invoke("ytmView:getIntegrationScripts");
@@ -376,7 +400,7 @@ window.addEventListener("load", async () => {
       document.querySelector("ytmusic-app-layout>ytmusic-player-bar #volume-slider").classList.add("ytmd-persist-volume-slider");
     }
 
-    ipcRenderer.on("remoteControl:execute", async (_event, command, value) => {
+    const executeRemoteControl = async (command: string, value?: unknown) => {
       switch (command) {
         case "playPause": {
           (
@@ -453,7 +477,7 @@ window.addEventListener("load", async () => {
           )();
 
           let newVolumeUp = currentVolumeUp + 10;
-          if (currentVolumeUp > 100) {
+          if (newVolumeUp > 100) {
             newVolumeUp = 100;
           }
           (
@@ -477,7 +501,7 @@ window.addEventListener("load", async () => {
           )();
 
           let newVolumeDown = currentVolumeDown - 10;
-          if (currentVolumeDown < 0) {
+          if (newVolumeDown < 0) {
             newVolumeDown = 0;
           }
           (
@@ -621,6 +645,10 @@ window.addEventListener("load", async () => {
           break;
         }
       }
+    };
+
+    ipcRenderer.on("remoteControl:execute", (_event, command, value) => {
+      void executeRemoteControl(command, value);
     });
 
     ipcRenderer.on("ytmView:getPlaylists", async (_event, requestId) => {
@@ -636,6 +664,147 @@ window.addEventListener("load", async () => {
       }
       ipcRenderer.send(`ytmView:getPlaylists:response:${requestId}`, playlists);
     });
+
+    const normalizeAccelerator = (accelerator: string): string => {
+      return accelerator
+        .split("+")
+        .map(part => {
+          switch (part) {
+            case "NumAdd":
+              return "numadd";
+            case "NumSub":
+              return "numsub";
+            case "NumDec":
+              return "numdec";
+            case "NumMult":
+              return "nummult";
+            case "NumDiv":
+              return "numdiv";
+            case "Num0":
+              return "num0";
+            case "Num1":
+              return "num1";
+            case "Num2":
+              return "num2";
+            case "Num3":
+              return "num3";
+            case "Num4":
+              return "num4";
+            case "Num5":
+              return "num5";
+            case "Num6":
+              return "num6";
+            case "Num7":
+              return "num7";
+            case "Num8":
+              return "num8";
+            case "Num9":
+              return "num9";
+            default:
+              return part;
+          }
+        })
+        .join("+");
+    };
+
+    const keyboardEventKey = (event: KeyboardEvent): string => {
+      switch (event.code) {
+        case "NumpadAdd":
+          return "numadd";
+        case "NumpadSubtract":
+          return "numsub";
+        case "NumpadDecimal":
+          return "numdec";
+        case "NumpadMultiply":
+          return "nummult";
+        case "NumpadDivide":
+          return "numdiv";
+        case "Numpad0":
+          return "num0";
+        case "Numpad1":
+          return "num1";
+        case "Numpad2":
+          return "num2";
+        case "Numpad3":
+          return "num3";
+        case "Numpad4":
+          return "num4";
+        case "Numpad5":
+          return "num5";
+        case "Numpad6":
+          return "num6";
+        case "Numpad7":
+          return "num7";
+        case "Numpad8":
+          return "num8";
+        case "Numpad9":
+          return "num9";
+        case "ArrowUp":
+          return "Up";
+        case "ArrowDown":
+          return "Down";
+        case "ArrowLeft":
+          return "Left";
+        case "ArrowRight":
+          return "Right";
+        default:
+          return event.key === " " ? "Space" : event.key;
+      }
+    };
+
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+    };
+
+    const eventMatchesAccelerator = (event: KeyboardEvent, accelerator: string): boolean => {
+      const parts = normalizeAccelerator(accelerator).split("+");
+      const key = parts.pop();
+      if (!key) return false;
+
+      const wantsCtrl =
+        parts.includes("Ctrl") || parts.includes("Control") || (parts.includes("CmdOrCtrl") && navigator.platform.toLowerCase().indexOf("mac") === -1);
+      const wantsMeta =
+        parts.includes("Meta") ||
+        parts.includes("Command") ||
+        parts.includes("Cmd") ||
+        (parts.includes("CmdOrCtrl") && navigator.platform.toLowerCase().indexOf("mac") !== -1);
+      const wantsAlt = parts.includes("Alt");
+      const wantsShift = parts.includes("Shift");
+
+      return (
+        event.ctrlKey === wantsCtrl &&
+        event.metaKey === wantsMeta &&
+        event.altKey === wantsAlt &&
+        event.shiftKey === wantsShift &&
+        keyboardEventKey(event) === key
+      );
+    };
+
+    window.addEventListener(
+      "keydown",
+      async event => {
+        if (isEditableTarget(event.target)) return;
+
+        const shortcuts = await store.get("shortcuts");
+        const shortcutCommands: Array<[string, string]> = [
+          [shortcuts.playPause, "playPause"],
+          [shortcuts.next, "next"],
+          [shortcuts.previous, "previous"],
+          [shortcuts.thumbsUp, "toggleLike"],
+          [shortcuts.thumbsDown, "toggleDislike"],
+          [shortcuts.volumeUp, "volumeUp"],
+          [shortcuts.volumeDown, "volumeDown"]
+        ];
+        const matchedShortcut = shortcutCommands.find(([accelerator]) => accelerator && eventMatchesAccelerator(event, accelerator));
+        if (!matchedShortcut) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        await executeRemoteControl(matchedShortcut[1]);
+      },
+      true
+    );
 
     let youtubeNonStopEnabled = (await store.get("integrations")).youtubeNonStopEnabled;
 

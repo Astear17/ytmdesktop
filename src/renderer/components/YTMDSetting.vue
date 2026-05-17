@@ -119,6 +119,16 @@ function select(optionKey: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.ytmd-setting > p,
+.name-description,
+.disabled-name-message {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .ytmd-setting.indented {
@@ -154,6 +164,7 @@ function select(optionKey: string) {
 .disabled-name-message .message {
   margin-top: 4px;
   color: #969696;
+  line-height: 1.35;
 }
 
 .reload-required {
@@ -276,12 +287,19 @@ input[type="file"] {
   margin-right: 8px;
 }
 
+.range-selector {
+  flex: 0 0 280px;
+  display: flex;
+  align-items: center;
+}
+
 input[type="range"] {
   appearance: none;
   height: 15px;
   border-radius: 4px;
   background: #212121;
   outline: none;
+  width: 100%;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -295,7 +313,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 .select {
   position: relative;
-  width: 216px;
+  flex: 0 0 clamp(280px, 38%, 360px);
+  min-width: 280px;
   background-color: #212121;
   border-radius: 4px;
 }
@@ -315,6 +334,8 @@ input[type="range"]::-webkit-slider-thumb {
 .select .selected .text {
   margin: unset;
   padding: unset;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .select .options {
@@ -322,9 +343,10 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute;
   left: 0;
   right: 0;
-  z-index: 1;
+  z-index: 20;
   border-radius: 0 0 4px 4px;
   width: 100%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 .select .options .option {
@@ -332,6 +354,8 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   background-color: #212121;
   padding: 8px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .select .options .option:hover {
@@ -340,5 +364,21 @@ input[type="range"]::-webkit-slider-thumb {
 
 .select:not(.open) .options {
   display: none;
+}
+
+@media (max-width: 760px) {
+  .ytmd-setting {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .select,
+  .range-selector,
+  .file-input-button {
+    flex-basis: auto;
+    width: 100%;
+    min-width: 0;
+  }
 }
 </style>
