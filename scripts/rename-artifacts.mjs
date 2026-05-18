@@ -1,12 +1,3 @@
-/**
- * Renames distributables under out/make to:
- *   YTMDesktop-Astear17_<version>-<suffix>_<os-arch>.<ext>
- *
- * Env:
- *   YTMD_ARTIFACT_SUFFIX — default "hotfix" (produces e.g. 3.0.0-hotfix)
- *   YTMD_RENAME_OS — optional override: windows | macos | linux (else inferred from process.platform)
- *   YTMD_RENAME_ARCH — optional override: x64 | arm64 (else inferred from process.arch)
- */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,7 +56,7 @@ function walk(dir, out = []) {
 }
 
 const version = readPkgVersion();
-const suffix = process.env.YTMD_ARTIFACT_SUFFIX?.trim() || "hotfix";
+const suffix = process.env.YTMD_ARTIFACT_SUFFIX?.trim();
 const os = inferOs();
 const arch = inferArch();
 const label = `${version}-${suffix}`;
