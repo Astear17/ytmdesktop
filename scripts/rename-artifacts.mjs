@@ -59,7 +59,7 @@ const version = readPkgVersion();
 const suffix = process.env.YTMD_ARTIFACT_SUFFIX?.trim();
 const os = inferOs();
 const arch = inferArch();
-const label = `${version}-${suffix}`;
+const label = suffix ? `${version}-${suffix}` : version;
 
 const files = walk(makeRoot).filter(shouldRename);
 let renamed = 0;
